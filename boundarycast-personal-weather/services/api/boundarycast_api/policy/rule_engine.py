@@ -1,5 +1,6 @@
 PERSONAL_SCOPES = ("exact_location", "microclimate_adjusted")
 DEGRADED_SCOPES = ("nearby_observation_area", "official_forecast_area")
+from ..epistemology.claim_scope import official_alert_governs
 
 
 def evaluate_policy_rules(policy_packs, evidence, epistemology, scope_decision):
@@ -8,7 +9,7 @@ def evaluate_policy_rules(policy_packs, evidence, epistemology, scope_decision):
     alerts = evidence["alerts"]
     claim_scope = scope_decision.get("claim_scope")
 
-    if alerts.get("active_alert_count", 0) > 0:
+    if official_alert_governs(evidence):
         effects.append("PROTOCOL")
         reasons.append("official_alert_supremacy")
 
@@ -52,3 +53,4 @@ def evaluate_policy_rules(policy_packs, evidence, epistemology, scope_decision):
         "effects": effects,
         "reason_codes": sorted(set(reasons)),
     }
+
