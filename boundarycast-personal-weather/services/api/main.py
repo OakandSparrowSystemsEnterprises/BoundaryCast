@@ -1,6 +1,8 @@
+import math
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
@@ -31,9 +33,34 @@ ROOT = Path(__file__).resolve().parents[2]
 APP_DIR = ROOT / "apps" / "web"
 ARTIFACT_PATH = ROOT / "artifacts" / "forecast-artifacts.ndjson"
 
+_POLICY_PACKS = None
+
+def get_policy_packs():
+    """Policy packs are versioned files; load once per process."""
+    global _POLICY_PACKS
+    if _POLICY_PACKS is None:
+        _POLICY_PACKS = load_policy_packs(ROOT / "examples" / "policy-packs")
+    return _POLICY_PACKS
+
 app = FastAPI(title="BoundaryCast Personal Weather", version="0.3.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/ui", StaticFiles(directory=str(APP_DIR), html=True), name="ui")
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request, exc):
+    # Non-finite floats (JSON `Infinity`/`NaN`) in a rejected request would
+    # otherwise crash the 422 response serializer. Sanitize the echo.
+    def clean(obj):
+        if obj is None or isinstance(obj, (str, int, bool)):
+            return obj
+        if isinstance(obj, float):
+            return obj if math.isfinite(obj) else str(obj)
+        if isinstance(obj, dict):
+            return {k: clean(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [clean(v) for v in obj]
+        return str(obj)
+    return JSONResponse(status_code=422, content={"detail": clean(exc.errors())})
 
 @app.get("/", include_in_schema=False)
 def root():
@@ -59,7 +86,7 @@ def evaluate_governed_forecast(req: PersonalForecastRequest):
     }
     epistemology = evaluate_knowledge_state(evidence, req)
     scope_decision = determine_claim_scope(req.requested_scope, epistemology, evidence)
-    policy_packs = load_policy_packs(ROOT / "examples" / "policy-packs")
+    policy_packs = get_policy_packs()
     policy_result = evaluate_policy_rules(policy_packs, evidence, epistemology, scope_decision)
     claim = build_forecast_claim(req, evidence, epistemology, scope_decision)
     verdict = evaluate_gatekeeper(evidence, epistemology, policy_result, claim, scope_decision)
@@ -139,20 +166,17 @@ def settle_market(market_id: str, req: MarketSettleRequest):
 def seed_demo_markets():
     """Seed the board with three preset markets and starter stakes so the
     demo is never empty on stage."""
-    if market_book.list_markets():
-        return {"markets": market_book.list_markets(), "seeded": False}
-    presets = [
+    presets = []
+    for question, condition in [
         ("Will it rain at this outdoor event between 2 PM and 5 PM?",
          dict(metric="precip_probability", operator="gt", threshold=0.5, minimum_scope="nearby_observation_area")),
         ("Will wind exceed 25 mph on this delivery route today?",
          dict(metric="wind_mph", operator="gt", threshold=25, minimum_scope="nearby_observation_area")),
         ("Will the temperature exceed 100°F at this job site today?",
          dict(metric="temperature_f", operator="gt", threshold=100, minimum_scope="nearby_observation_area")),
-    ]
-    for question, condition in presets:
+    ]:
         base = MarketCreateRequest(**condition).model_dump(exclude={"market_id"})
         base.pop("question")
-        market = market_book.create_market(question, base)
-        market_book.stake(market["market_id"], "YES", 60, trader="demo_yes")
-        market_book.stake(market["market_id"], "NO", 40, trader="demo_no")
-    return {"markets": market_book.list_markets(), "seeded": True}
+        presets.append((question, base, 60, 40))
+    seeded = market_book.seed_demo(presets)
+    return {"markets": market_book.list_markets(), "seeded": seeded}

@@ -16,6 +16,13 @@ function boolOrNull(v) {
 
 function label(v) { return String(v ?? 'unknown').replaceAll('_', ' '); }
 
+// Escape anything user- or API-supplied before it reaches innerHTML.
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 const SCOPE_LABELS = {
   exact_location: 'Exact location',
   microclimate_adjusted: 'Microclimate adjusted',
@@ -29,7 +36,7 @@ function showError(message) {
   $('result').innerHTML = `
     <h2>Forecast Verdict</h2>
     <div class="verdict">boundary failed</div>
-    <p>${message}</p>
+    <p>${esc(message)}</p>
   `;
 }
 
@@ -80,16 +87,16 @@ $('resolve').addEventListener('click', async () => {
     });
     if (!res.ok) {
       const detail = await res.text();
-      $('oracleResult').innerHTML = `<p>The oracle rejected the request (HTTP ${res.status}). ${detail.slice(0, 300)}</p>`;
+      $('oracleResult').innerHTML = `<p>The oracle rejected the request (HTTP ${res.status}). ${esc(detail.slice(0, 300))}</p>`;
       return;
     }
     const d = await res.json();
     const basis = d.resolution_basis;
     $('oracleResult').innerHTML = `
-      <div class="resolution resolution-${d.resolution}">${d.resolution}</div>
-      ${d.resolution_confidence ? `<p><strong>Confidence:</strong> ${d.resolution_confidence}</p>` : ''}
-      <p>${d.detail}</p>
-      ${d.escalation ? `<p class="fallback">Unresolved (<code>${d.unresolved_reason}</code>) — escalate to <strong>${d.escalation}</strong>. The oracle does not pretend.</p>` : ''}
+      <div class="resolution resolution-${esc(d.resolution)}">${esc(d.resolution)}</div>
+      ${d.resolution_confidence ? `<p><strong>Confidence:</strong> ${esc(d.resolution_confidence)}</p>` : ''}
+      <p>${esc(d.detail)}</p>
+      ${d.escalation ? `<p class="fallback">Unresolved (<code>${esc(d.unresolved_reason)}</code>) — escalate to <strong>${esc(d.escalation)}</strong>. The oracle does not pretend.</p>` : ''}
       <div class="grid">
         <div class="pill"><small>Resolution basis scope</small><br><strong>${label(basis.claim_scope)}</strong></div>
         <div class="pill"><small>Market minimum scope</small><br><strong>${label(basis.requested_minimum_scope)}</strong></div>
@@ -103,7 +110,7 @@ $('resolve').addEventListener('click', async () => {
       <small>Every resolution is bound to a hash-chained, replayable decision artifact.</small></p>
     `;
   } catch (error) {
-    $('oracleResult').innerHTML = `<p>Could not reach the BoundaryCast API. ${String(error)}</p>`;
+    $('oracleResult').innerHTML = `<p>Could not reach the BoundaryCast API. ${esc(String(error))}</p>`;
   } finally {
     button.disabled = false;
   }
@@ -125,10 +132,10 @@ function marketCard(m) {
   const total = m.pools.YES + m.pools.NO;
   const yesPct = total > 0 ? Math.round((m.pools.YES / total) * 100) : 50;
   const payoutRows = (m.payouts ?? []).map(p =>
-    `<small>${p.trader} (${p.kind}): ${p.payout}</small>`).join('<br>');
+    `<small>${esc(p.trader)} (${esc(p.kind)}): ${esc(p.payout)}</small>`).join('<br>');
   return `
     <div class="market">
-      <div class="market-q"><strong>${m.question}</strong></div>
+      <div class="market-q"><strong>${esc(m.question)}</strong></div>
       <div class="market-meta">
         <span class="pill-inline">status: <strong>${m.status.replaceAll('_', ' ')}</strong></span>
         <span class="pill-inline">YES pool: ${m.pools.YES}</span>
@@ -142,7 +149,7 @@ function marketCard(m) {
           <button data-settle="${m.market_id}" class="settle">Resolve with BoundaryCast</button>
         </div>` : `
         <div class="market-resolution">
-          <strong>${res.resolution}</strong>${res.resolution_confidence ? ` (${res.resolution_confidence})` : ''} — ${res.detail}<br>
+          <strong>${esc(res.resolution)}</strong>${res.resolution_confidence ? ` (${esc(res.resolution_confidence)})` : ''} — ${esc(res.detail)}<br>
           <small>verdict: ${res.gatekeeper_verdict} · claim scope: ${label(res.claim_scope)} · artifact <code>${res.artifact_hash.slice(0, 14)}...</code></small><br>
           <small>reason codes: ${[...(res.scope_reason_codes ?? []), ...(res.reason_codes ?? [])].map(x => `<code>${x}</code>`).join(' ') || '<code>none</code>'}</small>
           ${payoutRows ? `<br>${payoutRows}` : ''}
@@ -162,7 +169,7 @@ async function loadMarkets() {
       ? data.markets.map(marketCard).join('')
       : '<p>No markets yet. Seed the demo markets.</p>');
   } catch (error) {
-    $('marketBoard').innerHTML = `<p>Could not load markets. ${String(error)}</p>`;
+    $('marketBoard').innerHTML = `<p>Could not load markets. ${esc(String(error))}</p>`;
   }
 }
 
@@ -241,8 +248,8 @@ $('run').addEventListener('click', async () => {
     $('result').innerHTML = `
       <h2>Forecast Verdict</h2>
       <div class="verdict">${label(v.product_verdict)}</div>
-      <div class="scope-badge scope-${v.claim_scope}">Forecast Scope: ${SCOPE_LABELS[v.claim_scope] ?? label(v.claim_scope)}</div>
-      <p>${c.public_message}</p>
+      <div class="scope-badge scope-${esc(v.claim_scope)}">Forecast Scope: ${SCOPE_LABELS[v.claim_scope] ?? esc(label(v.claim_scope))}</div>
+      <p>${esc(c.public_message)}</p>
       ${fallbackNote}
       <div class="grid">
         <div class="pill"><small>Forecast scope</small><br><strong>${label(v.claim_scope)}</strong></div>
