@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from .live_sources import live_enabled, live_official_forecast
+
 def get_official_forecast_stub(req):
     if req.simulate_no_official_forecast:
         # Source is known but no forecast product is available for the grid.
@@ -14,9 +16,11 @@ def get_official_forecast_stub(req):
             "precip_probability": None,
             "grid_distance_km": None,
         }
-    if not req.demo_mode:
-        # Real NWS API adapter can be added here.
-        pass
+    if live_enabled() and not req.demo_mode:
+        try:
+            return live_official_forecast(req.latitude, req.longitude)
+        except Exception:
+            pass  # live source down or unparseable: deterministic demo fallback
     return {
         "source_name": "official_forecast_stub",
         "available": True,

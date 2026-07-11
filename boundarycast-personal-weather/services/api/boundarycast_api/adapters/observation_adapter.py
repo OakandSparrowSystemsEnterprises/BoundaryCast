@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from .live_sources import live_enabled, live_observation
+
 def get_observation_stub(req):
     if req.simulate_no_observation:
         # Source is known but no nearby observation is available.
@@ -12,6 +14,11 @@ def get_observation_stub(req):
             "temperature_f": None,
             "wind_mph": None,
         }
+    if live_enabled() and not req.demo_mode:
+        try:
+            return live_observation(req.latitude, req.longitude)
+        except Exception:
+            pass  # live source down or unparseable: deterministic demo fallback
     return {
         "source_name": "nearest_public_observation_stub",
         "available": True,

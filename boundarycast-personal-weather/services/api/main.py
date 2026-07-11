@@ -110,6 +110,11 @@ def evaluate_governed_forecast(req: PersonalForecastRequest):
     return {
         "product": "BoundaryCast",
         "frame": "Your Weather",
+        "evidence_sources": {
+            "official_forecast": evidence["official_forecast"].get("source_name"),
+            "observation": evidence["observation"].get("source_name"),
+            "alerts": evidence["alerts"].get("source_name"),
+        },
         "location_context": location_context,
         "microclimate_context": microclimate_context,
         "epistemology": epistemology,
@@ -148,7 +153,7 @@ def create_market(req: MarketCreateRequest):
 
 @app.get("/api/v1/markets")
 def markets():
-    return {"markets": market_book.list_markets()}
+    return {"markets": market_book.list_markets(), "crowd_feedback": market_book.crowd_scoreboard()}
 
 @app.post("/api/v1/markets/{market_id}/stake")
 def stake_market(market_id: str, req: StakeRequest):

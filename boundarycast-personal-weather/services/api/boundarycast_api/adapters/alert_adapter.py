@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from .live_sources import live_enabled, live_alerts
+
 def get_alerts_stub(req):
     if req.simulate_alert:
         return {
@@ -16,6 +18,11 @@ def get_alerts_stub(req):
                 }
             ],
         }
+    if live_enabled() and not req.demo_mode:
+        try:
+            return live_alerts(req.latitude, req.longitude)
+        except Exception:
+            pass  # non-US point or NWS down: deterministic demo fallback
     return {
         "source_name": "official_alerts_stub",
         "available": True,

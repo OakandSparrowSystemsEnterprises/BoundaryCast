@@ -47,6 +47,22 @@ button.settle { background: #b45309; }
 small { color: #64748b; }
 code { background: #f8fafc; padding: 2px 6px; border-radius: 6px; }
 button:disabled { opacity: .5; cursor: wait; }
+/* Instant read */
+.instant { display: flex; align-items: center; gap: 22px; padding: 6px 0 12px; flex-wrap: wrap; }
+.instant-temp { font-size: clamp(56px, 9vw, 92px); font-weight: 900; line-height: 1; color: #0f172a; animation: reveal .4s ease both; }
+.instant-temp .deg { font-size: .45em; font-weight: 700; color: #64748b; }
+.instant-main { flex: 1; min-width: 240px; }
+.instant-line { font-size: 20px; font-weight: 700; color: #0f172a; }
+.instant-sub { color: #475569; margin: 4px 0 8px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 700; background: #e2e8f0; color: #334155; }
+.chip-ok { background: #ecfdf5; color: #166534; }
+.chip-alert { background: #fee2e2; color: #991b1b; animation: pulse 1.6s ease infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 #dc262633; } 50% { box-shadow: 0 0 0 6px #dc262600; } }
+/* Advanced inputs + governance detail */
+details.advanced summary, .govdetail summary { cursor: pointer; font-weight: 700; color: #334155; }
+details.advanced .controls { margin-top: 14px; }
+.govdetail { margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
 /* Scope ladder */
 .ladder { margin: 16px 0; padding: 14px; border: 1px solid #e2e8f0; border-radius: 14px; background: white; }
 .rung { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; color: #94a3b8; font-weight: 650; }
@@ -72,3 +88,4 @@ button:disabled { opacity: .5; cursor: wait; }
 .band-track { flex: 1; height: 12px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
 .band-fill { height: 100%; width: 100%; border-radius: 999px; background: linear-gradient(90deg, #60a5fa, #f59e0b, #ef4444); animation: bandgrow .8s ease both; }
 @keyframes bandgrow { from { width: 0; } to { width: 100%; } }
+.crowd-line { color: #92400e; font-weight: 650; font-size: 14px; }
