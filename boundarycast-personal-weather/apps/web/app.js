@@ -32,6 +32,41 @@ const SCOPE_LABELS = {
   unsupported_specific_claim: 'Unsupported specific claim',
 };
 
+const SCOPE_LADDER = ['exact_location', 'microclimate_adjusted', 'nearby_observation_area', 'official_forecast_area'];
+
+function scopeLadderHtml(v) {
+  const special = v.claim_scope === 'official_alert_only' || v.claim_scope === 'unsupported_specific_claim';
+  const rows = SCOPE_LADDER.map(s => {
+    const granted = v.claim_scope === s;
+    const requested = v.requested_scope === s;
+    return `<div class="rung ${granted ? 'granted' : ''}${requested && !granted ? ' requested' : ''}">
+      <span class="rung-dot"></span><span class="rung-name">${label(s)}</span>
+      ${requested ? '<span class="rung-tag">requested</span>' : ''}
+      ${granted ? '<span class="rung-tag got">granted</span>' : ''}
+    </div>`;
+  }).join('');
+  const specialRow = special
+    ? `<div class="rung special granted"><span class="rung-dot"></span><span class="rung-name">${label(v.claim_scope)}</span><span class="rung-tag got">${v.claim_scope === 'official_alert_only' ? 'governs' : 'withheld'}</span></div>`
+    : '';
+  return `<div class="ladder"><small>Claim scope ladder — how specific the evidence lets us be</small>${rows}${specialRow}</div>`;
+}
+
+function checksHtml(e) {
+  const entries = Object.entries(e).filter(([, val]) => typeof val === 'boolean');
+  const passing = entries.filter(([, val]) => val).length;
+  const pills = entries.map(([k, val]) =>
+    `<span class="check ${val ? 'ok' : 'bad'}">${val ? '✓' : '✗'} ${esc(label(k))}</span>`).join('');
+  return `<details class="checks"><summary>Epistemology — ${passing}/${entries.length} checks passing</summary><div class="check-grid">${pills}</div></details>`;
+}
+
+function bandHtml(c) {
+  const b = c.uncertainty_interval;
+  if (!b) return '';
+  return `<div class="band"><small>Uncertainty band (public proxy)</small>
+    <div class="band-bar"><span>${esc(b.temperature_low_f)}°F</span><div class="band-track"><div class="band-fill"></div></div><span>${esc(b.temperature_high_f)}°F</span></div>
+    <small>±${esc(b.spread_f)}°F from observation distance, evidence staleness, and microclimate context</small></div>`;
+}
+
 function showError(message) {
   $('result').innerHTML = `
     <h2>Forecast Verdict</h2>
@@ -48,8 +83,13 @@ const MARKETS = {
   alert: { metric: 'alert_active', operator: 'gt', threshold: 0 },
 };
 
+function coordinatesValid() {
+  const lat = numberOrNull($('lat').value);
+  const lon = numberOrNull($('lon').value);
+  return lat !== null && lon !== null && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+}
+
 function currentEvidenceBody() {
-  const scenario = $('scenario').value;
   return {
     latitude: numberOrNull($('lat').value) ?? 37.7974,
     longitude: numberOrNull($('lon').value) ?? -121.2161,
@@ -61,13 +101,15 @@ function currentEvidenceBody() {
     nearby_water: boolOrNull($('water').value),
     urban_density: valueOrNull($('urban').value),
     demo_mode: true,
-    simulate_alert: scenario === 'alert',
-    simulate_no_official_forecast: scenario === 'no_forecast' || scenario === 'nothing',
-    simulate_no_observation: scenario === 'no_observation' || scenario === 'nothing'
+    ...scenarioOverrides()
   };
 }
 
 $('resolve').addEventListener('click', async () => {
+  if (!coordinatesValid()) {
+    $('oracleResult').innerHTML = '<p>Latitude must be between -90 and 90 and longitude between -180 and 180.</p>';
+    return;
+  }
   const marketKey = $('market').value;
   const body = {
     ...currentEvidenceBody(),
@@ -116,6 +158,58 @@ $('resolve').addEventListener('click', async () => {
   }
 });
 
+// --- Judge tour: auto-runs the 4-beat demo ---
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function setStrongEvidence() {
+  $('surface').value = 'open'; $('shade').value = 'partial'; $('wind').value = 'moderate';
+  $('elevation').value = '16'; $('water').value = 'true'; $('urban').value = 'high';
+}
+
+function clearEvidence() {
+  $('surface').value = ''; $('shade').value = ''; $('wind').value = '';
+  $('elevation').value = ''; $('water').value = ''; $('urban').value = '';
+}
+
+$('tour').addEventListener('click', async () => {
+  const btn = $('tour');
+  const say = (t) => { $('tourStatus').textContent = t; };
+  btn.disabled = true;
+  try {
+    say('Beat 1 — strong evidence: exact-location forecast, PERMIT…');
+    $('scenario').value = 'normal';
+    $('requestedScope').value = 'exact_location';
+    setStrongEvidence();
+    $('run').click();
+    await fetch('/api/v1/markets/seed-demo', { method: 'POST' });
+    await sleep(3000);
+
+    say('Beat 2 — resolving a seeded market through the oracle…');
+    await loadMarkets();
+    const settleBtn = document.querySelector('[data-settle]');
+    if (settleBtn) { settleBtn.click(); await sleep(3000); }
+
+    say('Beat 3 — weak evidence + exact-location demanded: the oracle refuses…');
+    clearEvidence();
+    $('minScope').value = 'exact_location';
+    $('market').value = 'temp100';
+    $('resolve').click();
+    await sleep(3200);
+
+    say('Beat 4 — official alert governs: alert market resolves YES (official)…');
+    $('scenario').value = 'alert';
+    $('minScope').value = 'official_forecast_area';
+    $('market').value = 'alert';
+    $('resolve').click();
+    await sleep(3200);
+    $('scenario').value = 'normal';
+    say('Tour complete — every decision above is a hash-chained, replayable artifact. Scroll for details.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 // --- Market Board ---
 
 function scenarioOverrides() {
@@ -137,7 +231,7 @@ function marketCard(m) {
     <div class="market">
       <div class="market-q"><strong>${esc(m.question)}</strong></div>
       <div class="market-meta">
-        <span class="pill-inline">status: <strong>${m.status.replaceAll('_', ' ')}</strong></span>
+        <span class="pill-inline">status: <strong>${esc(label(m.status))}</strong></span>
         <span class="pill-inline">YES pool: ${m.pools.YES}</span>
         <span class="pill-inline">NO pool: ${m.pools.NO}</span>
         <span class="pill-inline">implied YES: ${yesPct}%</span>
@@ -159,12 +253,13 @@ function marketCard(m) {
 
 async function loadMarkets() {
   try {
-    const data = await (await fetch('/api/v1/markets')).json();
-    let replayLine = '';
-    try {
-      const replay = await (await fetch('/api/v1/replay')).json();
-      replayLine = `<p class="replay-line">Replay status: ${replay.ok ? `artifact chain verified (${replay.count} artifacts)` : `CHAIN FAILED — ${replay.error}`}</p>`;
-    } catch { /* replay line is best-effort */ }
+    const [data, replay] = await Promise.all([
+      fetch('/api/v1/markets').then(r => r.json()),
+      fetch('/api/v1/replay').then(r => r.json()).catch(() => null),
+    ]);
+    const replayLine = replay
+      ? `<p class="replay-line">Replay status: ${replay.ok ? `artifact chain verified (${replay.count} artifacts)` : `CHAIN FAILED — ${esc(replay.error)}`}</p>`
+      : '';
     $('marketBoard').innerHTML = replayLine + (data.markets.length
       ? data.markets.map(marketCard).join('')
       : '<p>No markets yet. Seed the demo markets.</p>');
@@ -182,22 +277,30 @@ $('refreshMarkets').addEventListener('click', loadMarkets);
 $('marketBoard').addEventListener('click', async (event) => {
   const btn = event.target.closest('button');
   if (!btn) return;
-  if (btn.dataset.stake) {
-    await fetch(`/api/v1/markets/${btn.dataset.market}/stake`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ side: btn.dataset.stake, amount: 10, trader: 'you' })
-    });
-    loadMarkets();
-  } else if (btn.dataset.settle) {
-    btn.disabled = true;
-    await fetch(`/api/v1/markets/${btn.dataset.settle}/settle`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(scenarioOverrides())
-    });
-    loadMarkets();
+  try {
+    if (btn.dataset.stake) {
+      await fetch(`/api/v1/markets/${btn.dataset.market}/stake`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ side: btn.dataset.stake, amount: 10, trader: 'you' })
+      });
+    } else if (btn.dataset.settle) {
+      btn.disabled = true;
+      await fetch(`/api/v1/markets/${btn.dataset.settle}/settle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scenarioOverrides())
+      });
+    } else {
+      return;
+    }
+  } catch (error) {
+    $('marketBoard').insertAdjacentHTML('afterbegin',
+      `<p>Market action failed. ${esc(String(error))}</p>`);
+  } finally {
+    btn.disabled = false;
   }
+  loadMarkets();
 });
 
 $('run').addEventListener('click', async () => {
@@ -263,6 +366,9 @@ $('run').addEventListener('click', async () => {
         <div class="pill"><small>Temperature</small><br><strong>${c.temperature_f ?? 'unknown'}${c.temperature_f != null ? '°F' : ''}</strong></div>
         <div class="pill"><small>Precipitation</small><br><strong>${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '%' : 'unknown'}</strong></div>
       </div>
+      ${scopeLadderHtml(v)}
+      ${bandHtml(c)}
+      ${checksHtml(e)}
       <h3>Why this scope?</h3>
       <p>${v.scope_reason_codes.map(x => `<code>${x}</code>`).join(' ')}</p>
       <h3>Why this verdict?</h3>

@@ -12,6 +12,10 @@
       <p class="eyebrow">BoundaryCast</p>
       <h1>Your Weather</h1>
       <p class="sub">Your weather, checked before it speaks. BoundaryCast travels with you and gives the most specific forecast claim the evidence supports — from exact-location weather down to official-area guidance — without pretending and without storing your location history.</p>
+      <div class="tour-row">
+        <button id="tour">▶ Judge tour — auto-run the demo</button>
+        <span id="tourStatus"></span>
+      </div>
     </section>
 
     <section class="card controls">
@@ -29,7 +33,7 @@
       <label>Surface exposure <input id="surface" placeholder="asphalt, grass, roof" /></label>
       <label>Shade exposure <input id="shade" placeholder="open sun, tree shade, building shade" /></label>
       <label>Wind exposure <input id="wind" placeholder="sheltered, open, exposed" /></label>
-      <label>Elevation meters <input id="elevation" type="number" step="1" placeholder="unknown" /></label>
+      <label>Elevation meters <input id="elevation" type="number" step="1" min="-500" max="10000" placeholder="unknown" /></label>
       <label>Nearby water
         <select id="water"><option value="">unknown</option><option value="true">yes</option><option value="false">no</option></select>
       </label>
@@ -54,8 +58,8 @@
     </section>
 
     <section class="card">
-      <h2>Oracle Mode</h2>
-      <p class="oracle-sub">Resolve a weather-dependent prediction market from a governed, replayable forecast claim. Uses the location, microclimate, and demo scenario set above.</p>
+      <h2>Forecast Future Weather</h2>
+      <p class="oracle-sub">Resolve a weather-dependent prediction market from a governed, replayable forecast claim about future weather at this location. Uses the location, microclimate, and demo scenario set above.</p>
       <div class="controls">
         <label>Market question
           <select id="market">

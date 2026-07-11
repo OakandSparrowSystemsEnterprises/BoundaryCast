@@ -35,9 +35,9 @@ ORACLE_RECIPE_MANIFEST = {
     "replay_endpoint": {"method": "GET", "path": "/api/v1/replay"},
     "market_parameters": {
         "metric": ["temperature_f", "wind_mph", "precip_probability", "alert_active"],
-        "operator": ["gt", "gte", "lt", "lte"],
+        "operator": sorted(OPERATORS),
         "threshold": "number",
-        "minimum_scope": ["exact_location", "microclimate_adjusted", "nearby_observation_area", "official_forecast_area"],
+        "minimum_scope": list(SCOPE_SPECIFICITY),
         "location": {"latitude": "[-90, 90]", "longitude": "[-180, 180]", "precision_meters": "[1, 100000]"},
         "forecast_hours": "[1, 72]",
     },
@@ -53,10 +53,12 @@ ORACLE_RECIPE_MANIFEST = {
     "privacy": "Zero-cache: no identity, no location history; artifacts carry minimized location bindings only.",
 }
 
+# Keyed on the gatekeeper verdict enum, not the human-facing product
+# verdict strings, so UI copy rewording can never null the confidence.
 RESOLUTION_CONFIDENCE = {
-    "publish": "firm",
-    "publish_with_caution": "qualified",
-    "official_alert_governs": "official",
+    "PERMIT": "firm",
+    "PERMIT_WITH_CAUTION": "qualified",
+    "PROTOCOL": "official",
 }
 
 
@@ -80,7 +82,7 @@ def _record(req, forecast, resolution, detail, observed_value,
         "market_id": req.market_id,
         "question": req.question,
         "resolution": resolution,
-        "resolution_confidence": RESOLUTION_CONFIDENCE.get(verdict["product_verdict"]) if resolution in ("YES", "NO") else None,
+        "resolution_confidence": RESOLUTION_CONFIDENCE.get(verdict["gatekeeper_verdict"]) if resolution in ("YES", "NO") else None,
         "unresolved_reason": unresolved_reason,
         "escalation": escalation,
         "detail": detail,
@@ -115,9 +117,13 @@ def resolve_market(req, forecast):
 
     if gk == "PROTOCOL":
         if req.metric == "alert_active":
-            return _record(req, forecast, resolution="YES",
-                           detail="An official weather alert is active for this location. Alert-first resolution.",
-                           observed_value=True)
+            # Alert-first resolution still honors the market's stated
+            # condition: an "alert count < 1" market must resolve NO here.
+            observed = 1
+            holds = OPERATORS[req.operator](observed, req.threshold)
+            return _record(req, forecast, resolution="YES" if holds else "NO",
+                           detail=f"An official weather alert is active for this location; alert_active = {observed} {req.operator} {req.threshold} is {str(holds).lower()}. Alert-first resolution.",
+                           observed_value=observed)
         return _unresolved(req, forecast, "official_alert_governs",
                            "An official alert governs this area. BoundaryCast does not resolve condition markets from under an official alert.")
 
@@ -125,15 +131,19 @@ def resolve_market(req, forecast):
         return _unresolved(req, forecast, "insufficient_evidence",
                            "The evidence does not support any publishable claim for this market. Escalate to the market's arbitration path.")
 
-    if req.metric == "alert_active":
-        return _record(req, forecast, resolution="NO",
-                       detail="Official alerts were checked and none are active for this location.",
-                       observed_value=False)
-
+    # Outside alert supremacy, every resolution — including alert_active NO —
+    # honors the market's minimum scope, exactly as the manifest promises.
     claim_scope = verdict["claim_scope"]
     if not _scope_meets_minimum(claim_scope, req.minimum_scope):
         return _unresolved(req, forecast, "scope_below_market_minimum",
                            f"The evidence supports a '{claim_scope}' claim, but this market requires at least '{req.minimum_scope}'.")
+
+    if req.metric == "alert_active":
+        observed = 0
+        holds = OPERATORS[req.operator](observed, req.threshold)
+        return _record(req, forecast, resolution="YES" if holds else "NO",
+                       detail=f"Official alerts were checked and none are active; alert_active = {observed} {req.operator} {req.threshold} is {str(holds).lower()}.",
+                       observed_value=observed)
 
     observed = forecast["claim"].get(req.metric)
     if observed is None:

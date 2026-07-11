@@ -13,6 +13,7 @@ Zero-cache note: markets are public objects, so they carry only the
 demo/synthetic coordinates given at creation. Play-money positions carry
 no identity beyond a caller-chosen display name.
 """
+import copy
 import threading
 from datetime import datetime, timezone
 
@@ -66,11 +67,37 @@ def seed_demo(presets):
 
 
 def list_markets():
-    return sorted(_MARKETS.values(), key=lambda m: m["market_id"])
+    # Snapshot under the lock: readers must never see a mid-mutation market
+    # or iterate a dict a concurrent create is resizing. Insertion order is
+    # market_id order (ids are monotonic), so no sort is needed.
+    with _BOOK_LOCK:
+        return copy.deepcopy(list(_MARKETS.values()))
 
 
 def get_market(market_id):
-    return _MARKETS.get(market_id)
+    with _BOOK_LOCK:
+        return copy.deepcopy(_MARKETS.get(market_id))
+
+
+def begin_settle(market_id):
+    """Atomically claim an open market for settlement. This runs BEFORE the
+    forecast pipeline so a losing concurrent settle never writes an orphan
+    resolution artifact to the ledger."""
+    with _BOOK_LOCK:
+        market = _MARKETS.get(market_id)
+        if market is None:
+            return None, "unknown_market"
+        if market["status"] != "open":
+            return None, "market_not_open"
+        market["status"] = "settling"
+        return copy.deepcopy(market), None
+
+
+def abort_settle(market_id):
+    with _BOOK_LOCK:
+        market = _MARKETS.get(market_id)
+        if market is not None and market["status"] == "settling":
+            market["status"] = "open"
 
 
 def stake(market_id, side, amount, trader="anon"):
@@ -110,7 +137,7 @@ def settle(market_id, resolution_record):
         market = _MARKETS.get(market_id)
         if market is None:
             return None, "unknown_market"
-        if market["status"] != "open":
+        if market["status"] not in ("open", "settling"):
             return None, "market_not_open"
 
         outcome = resolution_record["resolution"]

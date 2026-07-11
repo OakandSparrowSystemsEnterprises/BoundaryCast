@@ -1,4 +1,5 @@
 from .provider import foresight
+from .uncertainty_band import uncertainty_band
 
 SCOPE_EXPLANATIONS = {
     "exact_location": "Your location is precise, official forecast is fresh, nearby observation support is acceptable, microclimate context is sufficient, and uncertainty is bounded.",
@@ -54,6 +55,7 @@ def build_forecast_claim(req, evidence, epistemology, scope_decision):
         "precip_probability": official.get("precip_probability"),
         "microclimate_confidence": mcx.get("microclimate_confidence"),
         "microclimate_note": micro_note,
+        "uncertainty_interval": uncertainty_band(evidence, epistemology),
         "knowledge_state": epistemology.get("knowledge_state"),
         "uncertainty_label": epistemology.get("uncertainty"),
         "evidence_score": epistemology.get("evidence_score"),

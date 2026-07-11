@@ -1,6 +1,5 @@
 """Adversarial hardening tests: concurrency, hostile input, payout edges,
 and UI injection safety."""
-import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -14,8 +13,14 @@ PROJECT_ROOT = Path(main.__file__).resolve().parents[2]
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
-    monkeypatch.setattr(main, "ARTIFACT_PATH", tmp_path / "forecast-artifacts.ndjson")
+def artifact_path(tmp_path, monkeypatch):
+    path = tmp_path / "forecast-artifacts.ndjson"
+    monkeypatch.setattr(main, "ARTIFACT_PATH", path)
+    return path
+
+
+@pytest.fixture
+def client(artifact_path):
     market_book.reset_book()
     return TestClient(main.app)
 
@@ -110,6 +115,48 @@ def test_mixed_traffic_keeps_chain_verifiable(client):
     replay = client.get("/api/v1/replay").json()
     assert replay["ok"] is True
     assert replay["count"] == 5
+
+
+def test_alert_market_lt_operator_not_inverted(client):
+    # An "alert count < 1" (no-alert) market must resolve YES when quiet
+    # and NO under an active alert — the operator is honored, not assumed gt.
+    quiet = client.post("/api/v1/oracle/resolve", json={
+        "metric": "alert_active", "operator": "lt", "threshold": 1}).json()
+    assert quiet["resolution"] == "YES"
+    alerted = client.post("/api/v1/oracle/resolve", json={
+        "metric": "alert_active", "operator": "lt", "threshold": 1,
+        "simulate_alert": True}).json()
+    assert alerted["resolution"] == "NO"
+
+
+def test_losing_concurrent_settle_writes_no_orphan_artifact(client, artifact_path):
+    m = client.post("/api/v1/markets/seed-demo").json()["markets"][0]
+    claimed, error = market_book.begin_settle(m["market_id"])
+    assert error is None
+    # A settle racing against the claim is rejected BEFORE the pipeline runs,
+    # so no orphan resolution artifact reaches the ledger.
+    res = client.post(f"/api/v1/markets/{m['market_id']}/settle", json={})
+    assert res.status_code == 409
+    assert not artifact_path.exists()
+    market_book.abort_settle(m["market_id"])
+    assert client.post(f"/api/v1/markets/{m['market_id']}/settle", json={}).status_code == 200
+
+
+def test_creation_time_simulation_flags_not_stored(client):
+    m = client.post("/api/v1/markets", json={
+        "question": "flag hygiene", "metric": "temperature_f",
+        "operator": "gt", "threshold": 80, "simulate_alert": True}).json()
+    assert m["oracle_params"]["simulate_alert"] is False
+    r = client.post(f"/api/v1/markets/{m['market_id']}/settle", json={}).json()
+    assert r["market"]["resolution"]["claim_scope"] != "official_alert_only"
+
+
+def test_non_demo_market_coordinates_minimized(client):
+    m = client.post("/api/v1/markets", json={
+        "question": "privacy", "metric": "temperature_f",
+        "demo_mode": False, "latitude": 37.7974, "longitude": -121.2161}).json()
+    assert m["oracle_params"]["latitude"] == 37.8
+    assert m["oracle_params"]["longitude"] == -121.22
 
 
 def test_ui_escapes_user_content():
