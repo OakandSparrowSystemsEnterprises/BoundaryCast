@@ -100,7 +100,9 @@ function currentEvidenceBody() {
     elevation_meters: numberOrNull($('elevation').value),
     nearby_water: boolOrNull($('water').value),
     urban_density: valueOrNull($('urban').value),
-    demo_mode: true,
+    // Live evidence when the server has BOUNDARYCAST_LIVE_EVIDENCE=1;
+    // the server falls back to demo stubs automatically if live fails.
+    demo_mode: false,
     ...scenarioOverrides()
   };
 }
@@ -279,7 +281,11 @@ async function loadMarkets() {
     const replayLine = replay
       ? `<p class="replay-line">Replay status: ${replay.ok ? `artifact chain verified (${replay.count} artifacts)` : `CHAIN FAILED — ${esc(replay.error)}`}</p>`
       : '';
-    $('marketBoard').innerHTML = replayLine + (data.markets.length
+    const cf = data.crowd_feedback;
+    const crowdLine = cf && cf.markets_scored
+      ? `<p class="crowd-line">🏆 Crowd vs oracle: ${cf.crowd_correct}/${cf.markets_scored} calls right · Brier ${cf.crowd_brier_score} — your stakes are votes, recorded as a calibration signal the forecast can train on.</p>`
+      : '<p class="crowd-line">🏆 Stake YES/NO below — the crowd\'s calls get scored against the oracle and recorded as a training signal.</p>';
+    $('marketBoard').innerHTML = replayLine + crowdLine + (data.markets.length
       ? data.markets.map(marketCard).join('')
       : '<p>No markets yet. Seed the demo markets.</p>');
   } catch (error) {
@@ -371,6 +377,8 @@ $('run').addEventListener('click', async () => {
     const alertChip = v.claim_scope === 'official_alert_only'
       ? '<span class="chip chip-alert">⚠ Official alert governs</span>'
       : '<span class="chip chip-ok">No official alerts</span>';
+    const live = Object.values(data.evidence_sources ?? {}).some(s => String(s).includes('live'));
+    const sourceChip = `<span class="chip">${live ? '🌐 live public data' : 'demo data'}</span>`;
 
     $('result').innerHTML = `
       <div class="instant">
@@ -378,7 +386,7 @@ $('run').addEventListener('click', async () => {
         <div class="instant-main">
           <div class="instant-line">${esc(c.summary)}</div>
           <div class="instant-sub">${b ? `${esc(b.temperature_low_f)}–${esc(b.temperature_high_f)}°F expected · ` : ''}${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '% rain chance · ' : ''}checked ${e.evidence_score != null ? Math.round(e.evidence_score * 100) : 0}% of evidence gates</div>
-          <div class="chip-row">${alertChip}<span class="chip">${SCOPE_LABELS[v.claim_scope] ?? esc(label(v.claim_scope))}</span><span class="chip">${label(v.product_verdict)}</span></div>
+          <div class="chip-row">${alertChip}<span class="chip">${SCOPE_LABELS[v.claim_scope] ?? esc(label(v.claim_scope))}</span><span class="chip">${label(v.product_verdict)}</span>${sourceChip}</div>
         </div>
       </div>
       <div class="scope-badge scope-${esc(v.claim_scope)}">Forecast Scope: ${SCOPE_LABELS[v.claim_scope] ?? esc(label(v.claim_scope))}</div>

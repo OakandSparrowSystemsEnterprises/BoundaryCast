@@ -124,6 +124,36 @@ def stake(market_id, side, amount, trader="anon"):
         return position, None
 
 
+def crowd_scoreboard():
+    """Gamified feedback loop: stakes are votes. For every resolved market,
+    compare the crowd's implied probability against the oracle outcome.
+    The aggregate is exposed as a public training signal (crowd calibration)
+    that future forecast weighting can consume — recorded now, honestly
+    labeled as not yet weighting the public demo forecast."""
+    with _BOOK_LOCK:
+        scored = 0
+        crowd_correct = 0
+        brier_sum = 0.0
+        for market in _MARKETS.values():
+            resolution = market.get("resolution")
+            if not resolution or resolution["resolution"] not in ("YES", "NO"):
+                continue
+            total = market["pools"]["YES"] + market["pools"]["NO"]
+            if total <= 0:
+                continue
+            implied_yes = market["pools"]["YES"] / total
+            outcome = 1.0 if resolution["resolution"] == "YES" else 0.0
+            scored += 1
+            crowd_correct += 1 if (implied_yes >= 0.5) == (outcome == 1.0) else 0
+            brier_sum += (implied_yes - outcome) ** 2
+        return {
+            "markets_scored": scored,
+            "crowd_correct": crowd_correct,
+            "crowd_brier_score": round(brier_sum / scored, 3) if scored else None,
+            "training_note": "Crowd stakes are recorded as a calibration signal for future forecast weighting; the public demo forecast does not consume it yet.",
+        }
+
+
 def _refund_all(market):
     return [
         {"position_id": p["position_id"], "trader": p["trader"], "payout": p["stake"], "kind": "refund"}

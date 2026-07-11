@@ -88,3 +88,4 @@ details.advanced .controls { margin-top: 14px; }
 .band-track { flex: 1; height: 12px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
 .band-fill { height: 100%; width: 100%; border-radius: 999px; background: linear-gradient(90deg, #60a5fa, #f59e0b, #ef4444); animation: bandgrow .8s ease both; }
 @keyframes bandgrow { from { width: 0; } to { width: 100%; } }
+.crowd-line { color: #92400e; font-weight: 650; font-size: 14px; }
