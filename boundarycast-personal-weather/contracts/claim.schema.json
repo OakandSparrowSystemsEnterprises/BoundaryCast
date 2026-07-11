@@ -2,13 +2,25 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "BoundaryCast Forecast Claim",
   "type": "object",
-  "required": ["claim_id", "claim_type", "tenant_id", "summary", "microclimate_confidence", "knowledge_state"],
+  "required": [
+    "claim_id", "claim_type", "tenant_id", "summary",
+    "requested_scope", "claim_scope", "scope_reason_codes", "fallback_applied",
+    "public_message", "microclimate_confidence", "uncertainty_label",
+    "evidence_score", "knowledge_state"
+  ],
   "properties": {
     "claim_id": {"type": "string"},
     "claim_type": {"type": "string"},
     "tenant_id": {"type": "string"},
     "summary": {"type": "string"},
+    "requested_scope": {"enum": ["exact_location", "microclimate_adjusted", "nearby_observation_area", "official_forecast_area"]},
+    "claim_scope": {"enum": ["exact_location", "microclimate_adjusted", "nearby_observation_area", "official_forecast_area", "official_alert_only", "unsupported_specific_claim"]},
+    "scope_reason_codes": {"type": "array", "items": {"type": "string"}},
+    "fallback_applied": {"type": "boolean"},
+    "public_message": {"type": "string"},
     "microclimate_confidence": {"type": "string"},
+    "uncertainty_label": {"type": "string"},
+    "evidence_score": {"type": "number"},
     "knowledge_state": {"type": "string"}
   }
 }

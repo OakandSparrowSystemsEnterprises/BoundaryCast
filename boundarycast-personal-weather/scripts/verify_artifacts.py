@@ -4,7 +4,10 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services" / "api"))
 from boundarycast_api.artifacts.replay import verify_artifact_chain
 
-path = Path(__file__).resolve().parents[1] / "artifacts" / "forecast-artifacts.ndjson"
+if len(sys.argv) > 1:
+    path = Path(sys.argv[1])
+else:
+    path = Path(__file__).resolve().parents[1] / "artifacts" / "forecast-artifacts.ndjson"
 result = verify_artifact_chain(path)
 
 print(f"verified: {result['ok']}")

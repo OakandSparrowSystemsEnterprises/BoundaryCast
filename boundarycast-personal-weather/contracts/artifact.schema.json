@@ -2,15 +2,37 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "BoundaryCast Decision Artifact",
   "type": "object",
-  "required": ["artifact_id", "tenant_id", "evidence_root", "claim_root", "gatekeeper_verdict", "artifact_hash"],
+  "required": [
+    "artifact_id", "tenant_id", "evidence_root", "claim_root",
+    "claim_scope", "requested_scope", "fallback_applied", "scope_reason_codes",
+    "location_binding_type", "zero_cache", "privacy_notes",
+    "policy_pack_versions", "gatekeeper_verdict", "product_verdict",
+    "reason_codes", "artifact_hash", "previous_hash"
+  ],
   "properties": {
     "artifact_id": {"type": "string"},
     "previous_hash": {"type": ["string", "null"]},
     "tenant_id": {"type": "string"},
+    "location_context_id": {"type": "string"},
+    "claim_scope": {"enum": ["exact_location", "microclimate_adjusted", "nearby_observation_area", "official_forecast_area", "official_alert_only", "unsupported_specific_claim"]},
+    "requested_scope": {"enum": ["exact_location", "microclimate_adjusted", "nearby_observation_area", "official_forecast_area"]},
+    "fallback_applied": {"type": "boolean"},
+    "scope_reason_codes": {"type": "array", "items": {"type": "string"}},
+    "location_binding_type": {"enum": ["synthetic", "rounded", "grid_hash", "not_stored"]},
+    "location_binding_value": {"type": ["object", "null"]},
+    "zero_cache": {"const": true},
+    "privacy_notes": {"type": "string"},
     "evidence_root": {"type": "string"},
     "claim_root": {"type": "string"},
     "policy_pack_versions": {"type": "array"},
+    "ontology_version": {"type": "string"},
     "gatekeeper_verdict": {"type": "string"},
+    "product_verdict": {"type": "string"},
+    "reason_codes": {"type": "array"},
+    "microclimate_confidence": {"type": "string"},
+    "created_at": {"type": "string"},
+    "model_versions": {"type": "object"},
+    "nonce": {"type": "string"},
     "artifact_hash": {"type": "string"}
   }
 }

@@ -11,13 +11,21 @@
     <section class="hero">
       <p class="eyebrow">BoundaryCast</p>
       <h1>Your Weather</h1>
-      <p class="sub">A governed personal forecast for the exact place you are, with evidence, caution, and replayable proof.</p>
+      <p class="sub">Your weather, checked before it speaks. BoundaryCast travels with you and gives the most specific forecast claim the evidence supports — from exact-location weather down to official-area guidance — without pretending and without storing your location history.</p>
     </section>
 
     <section class="card controls">
       <label>Latitude <input id="lat" type="number" step="0.0001" min="-90" max="90" value="37.7974" /></label>
       <label>Longitude <input id="lon" type="number" step="0.0001" min="-180" max="180" value="-121.2161" /></label>
-      <label>Precision meters <input id="precision" type="number" min="1" value="25" /></label>
+      <label>Precision meters <input id="precision" type="number" min="1" max="100000" value="25" /></label>
+      <label>Requested scope
+        <select id="requestedScope">
+          <option value="exact_location">exact location</option>
+          <option value="microclimate_adjusted">microclimate adjusted</option>
+          <option value="nearby_observation_area">nearby observation area</option>
+          <option value="official_forecast_area">official forecast area</option>
+        </select>
+      </label>
       <label>Surface exposure <input id="surface" placeholder="asphalt, grass, roof" /></label>
       <label>Shade exposure <input id="shade" placeholder="open sun, tree shade, building shade" /></label>
       <label>Wind exposure <input id="wind" placeholder="sheltered, open, exposed" /></label>
@@ -27,6 +35,15 @@
       </label>
       <label>Urban density
         <select id="urban"><option value="">unknown</option><option>low</option><option>medium</option><option>high</option></select>
+      </label>
+      <label>Demo scenario
+        <select id="scenario">
+          <option value="normal">normal evidence</option>
+          <option value="alert">active official alert</option>
+          <option value="no_observation">no nearby observation</option>
+          <option value="no_forecast">no official forecast</option>
+          <option value="nothing">no forecast + no observation</option>
+        </select>
       </label>
       <button id="run">Generate governed forecast</button>
     </section>

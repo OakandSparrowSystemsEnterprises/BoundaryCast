@@ -2,11 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "BoundaryCast Gatekeeper-Lite Verdict",
   "type": "object",
-  "required": ["gatekeeper_verdict", "product_verdict", "reason_codes", "artifact_required"],
+  "required": ["gatekeeper_verdict", "product_verdict", "reason_codes", "claim_scope", "requested_scope", "scope_reason_codes", "fallback_applied", "artifact_required"],
   "properties": {
     "gatekeeper_verdict": {"enum": ["PERMIT", "PERMIT_WITH_CAUTION", "ABSTAIN", "PROTOCOL", "BLOCK"]},
     "product_verdict": {"enum": ["publish", "publish_with_caution", "abstain", "official_alert_governs", "blocked"]},
     "reason_codes": {"type": "array"},
+    "claim_scope": {"enum": ["exact_location", "microclimate_adjusted", "nearby_observation_area", "official_forecast_area", "official_alert_only", "unsupported_specific_claim"]},
+    "requested_scope": {"enum": ["exact_location", "microclimate_adjusted", "nearby_observation_area", "official_forecast_area"]},
+    "scope_reason_codes": {"type": "array", "items": {"type": "string"}},
+    "fallback_applied": {"type": "boolean"},
     "artifact_required": {"type": "boolean"}
   }
 }

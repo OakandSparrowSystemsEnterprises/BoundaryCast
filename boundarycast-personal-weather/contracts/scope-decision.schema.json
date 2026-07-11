@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BoundaryCast Scope Decision",
+  "description": "The claim-scope layer's answer to 'how specific may the system be?'. The Gatekeeper verdict separately answers 'may the system speak?'.",
+  "type": "object",
+  "required": ["requested_scope", "claim_scope", "scope_reason_codes", "fallback_applied"],
+  "properties": {
+    "requested_scope": {"enum": ["exact_location", "microclimate_adjusted", "nearby_observation_area", "official_forecast_area"]},
+    "claim_scope": {"enum": ["exact_location", "microclimate_adjusted", "nearby_observation_area", "official_forecast_area", "official_alert_only", "unsupported_specific_claim"]},
+    "scope_reason_codes": {"type": "array", "items": {"type": "string"}},
+    "fallback_applied": {"type": "boolean"}
+  }
+}

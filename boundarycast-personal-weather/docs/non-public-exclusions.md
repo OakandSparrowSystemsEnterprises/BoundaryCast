@@ -12,3 +12,6 @@ This repository does not include:
 - enterprise policy-pack compiler internals
 - private artifact sufficiency proofs
 - QuickOps labor/cash/safety policy packs
+- consortium math
+
+The public claim-scope layer in this repository is a plain-language graceful-degradation enum with boolean support checks. It is not the private claim-altitude math and does not derive from it.

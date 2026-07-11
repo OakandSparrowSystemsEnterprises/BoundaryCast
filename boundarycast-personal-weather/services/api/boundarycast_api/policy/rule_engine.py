@@ -1,7 +1,12 @@
-def evaluate_policy_rules(policy_packs, evidence, epistemology):
+PERSONAL_SCOPES = ("exact_location", "microclimate_adjusted")
+DEGRADED_SCOPES = ("nearby_observation_area", "official_forecast_area")
+
+
+def evaluate_policy_rules(policy_packs, evidence, epistemology, scope_decision):
     reasons = []
     effects = []
     alerts = evidence["alerts"]
+    claim_scope = scope_decision.get("claim_scope")
 
     if alerts.get("active_alert_count", 0) > 0:
         effects.append("PROTOCOL")
@@ -24,8 +29,19 @@ def evaluate_policy_rules(policy_packs, evidence, epistemology):
         reasons.append("low_microclimate_confidence")
 
     if not epistemology.get("uncertainty_bounded"):
+        # Unbounded uncertainty forbids personal-scope claims outright, but a
+        # gracefully degraded area claim may still publish with caution: the
+        # claim being made is the official product, not a personal adjustment.
+        if claim_scope in PERSONAL_SCOPES:
+            effects.append("ABSTAIN")
+            reasons.append("uncertainty_too_wide")
+        elif claim_scope in DEGRADED_SCOPES:
+            effects.append("PERMIT_WITH_CAUTION")
+            reasons.append("uncertainty_partially_bounded")
+
+    if claim_scope == "unsupported_specific_claim":
         effects.append("ABSTAIN")
-        reasons.append("uncertainty_too_wide")
+        reasons.append("unsupported_specific_claim")
 
     if not epistemology.get("verdict_replayable"):
         effects.append("BLOCK")

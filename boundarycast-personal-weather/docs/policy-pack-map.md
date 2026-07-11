@@ -3,6 +3,7 @@
 BoundaryCast public policy packs:
 
 - Official Alert Policy
+- Claim Scope Policy
 - Evidence Freshness Policy
 - Microclimate Confidence Policy
 - Uncertainty Policy
