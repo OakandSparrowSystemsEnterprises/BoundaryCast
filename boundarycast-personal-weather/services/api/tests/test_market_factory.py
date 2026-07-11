@@ -25,6 +25,40 @@ def test_seed_is_idempotent(client):
     assert len(again["markets"]) == 3
 
 
+def test_reset_demo_clears_stale_positions_and_resolutions(client):
+    market = seed(client)[0]
+    client.post(f"/api/v1/markets/{market['market_id']}/stake",
+                json={"side": "YES", "amount": 10, "trader": "you"})
+    client.post(f"/api/v1/markets/{market['market_id']}/settle", json={})
+
+    fresh = client.post("/api/v1/markets/reset-demo").json()["markets"]
+    assert len(fresh) == 3
+    assert all(m["status"] == "open" for m in fresh)
+    assert all(not any(p["trader"] == "you" for p in m["positions"]) for m in fresh)
+
+
+def test_settlement_accepts_live_location_context(client, monkeypatch):
+    market = seed(client)[0]
+    seen = {}
+    original = main.evaluate_governed_forecast
+
+    def capture(req):
+        seen.update(latitude=req.latitude, longitude=req.longitude,
+                    precision_meters=req.precision_meters, demo_mode=req.demo_mode)
+        # Avoid outbound weather calls while preserving the complete pipeline.
+        req.demo_mode = True
+        return original(req)
+
+    monkeypatch.setattr(main, "evaluate_governed_forecast", capture)
+    response = client.post(f"/api/v1/markets/{market['market_id']}/settle", json={
+        "latitude": 37.782, "longitude": -122.411,
+        "precision_meters": 102, "demo_mode": False,
+    })
+    assert response.status_code == 200
+    assert seen == {"latitude": 37.782, "longitude": -122.411,
+                    "precision_meters": 102, "demo_mode": False}
+
+
 def test_create_and_stake(client):
     m = client.post("/api/v1/markets", json={
         "question": "Will wind exceed 25 mph at this checkpoint?",
@@ -105,3 +139,4 @@ def test_settlement_artifacts_chain(client):
     replay = client.get("/api/v1/replay").json()
     assert replay["ok"] is True
     assert replay["count"] == 3
+

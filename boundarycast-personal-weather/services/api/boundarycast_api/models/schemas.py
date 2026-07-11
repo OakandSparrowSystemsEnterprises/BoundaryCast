@@ -59,3 +59,17 @@ class MarketSettleRequest(BaseModel):
     simulate_alert: Optional[bool] = None
     simulate_no_official_forecast: Optional[bool] = None
     simulate_no_observation: Optional[bool] = None
+    # Live settlement context supplied by the UI at click time. These values
+    # override the seeded demonstration coordinates without being persisted.
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90, allow_inf_nan=False)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180, allow_inf_nan=False)
+    precision_meters: Optional[int] = Field(default=None, ge=1, le=100000)
+    forecast_hours: Optional[int] = Field(default=None, ge=1, le=72)
+    surface_exposure: Optional[str] = Field(default=None, max_length=100)
+    shade_exposure: Optional[str] = Field(default=None, max_length=100)
+    elevation_meters: Optional[float] = Field(default=None, ge=-500, le=10000, allow_inf_nan=False)
+    wind_exposure: Optional[str] = Field(default=None, max_length=100)
+    nearby_water: Optional[bool] = None
+    urban_density: Optional[Literal["low", "medium", "high"]] = None
+    demo_mode: Optional[bool] = None
+

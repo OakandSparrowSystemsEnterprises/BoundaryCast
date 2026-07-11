@@ -302,7 +302,7 @@ async function loadMarkets() {
 }
 
 $('seedMarkets').addEventListener('click', async () => {
-  await fetch('/api/v1/markets/seed-demo', { method: 'POST' });
+  await fetch('/api/v1/markets/reset-demo', { method: 'POST' });
   loadMarkets();
 });
 $('refreshMarkets').addEventListener('click', loadMarkets);
@@ -323,7 +323,9 @@ $('marketBoard').addEventListener('click', async (event) => {
       await fetch(`/api/v1/markets/${btn.dataset.settle}/settle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scenarioOverrides())
+        // Settle against the location and evidence currently visible in the
+        // app, never the synthetic coordinates stored in the seeded call.
+        body: JSON.stringify(currentEvidenceBody())
       });
     } else {
       return;
