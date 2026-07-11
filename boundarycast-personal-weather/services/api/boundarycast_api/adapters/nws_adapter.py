@@ -20,7 +20,14 @@ def get_official_forecast_stub(req):
         try:
             return live_official_forecast(req.latitude, req.longitude)
         except Exception:
-            pass  # live source down or unparseable: deterministic demo fallback
+            return {
+                "source_name": "live_forecast_unavailable",
+                "available": False,
+                "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                "freshness_minutes": None, "summary": None,
+                "temperature_f": None, "wind_mph": None,
+                "precip_probability": None, "grid_distance_km": None,
+            }
     return {
         "source_name": "official_forecast_stub",
         "available": True,
@@ -32,3 +39,4 @@ def get_official_forecast_stub(req):
         "precip_probability": 0.05,
         "grid_distance_km": 3.2,
     }
+
