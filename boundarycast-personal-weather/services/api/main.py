@@ -1,5 +1,5 @@
 import math
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -19,6 +19,7 @@ from boundarycast_api.adapters.microclimate_adapter import build_microclimate_co
 from boundarycast_api.adapters.nws_adapter import get_official_forecast_stub
 from boundarycast_api.adapters.observation_adapter import get_observation_stub
 from boundarycast_api.adapters.alert_adapter import get_alerts_stub
+from boundarycast_api.adapters.live_sources import search_locations
 from boundarycast_api.epistemology.checks import evaluate_knowledge_state
 from boundarycast_api.epistemology.claim_scope import determine_claim_scope
 from boundarycast_api.policy.policy_loader import load_policy_packs
@@ -37,7 +38,7 @@ _POLICY_PACKS = None
 
 def get_policy_packs():
     """Policy packs are versioned files; load once per process. An empty
-    load (e.g. missing directory at boot) is never cached — every decision
+    load (e.g. missing directory at boot) is never cached â€” every decision
     must cite the real active packs or keep retrying."""
     global _POLICY_PACKS
     if not _POLICY_PACKS:
@@ -128,6 +129,15 @@ def evaluate_governed_forecast(req: PersonalForecastRequest):
 def personal_forecast(req: PersonalForecastRequest):
     return evaluate_governed_forecast(req)
 
+@app.get("/api/v1/locations/search")
+def location_search(q: str = Query(min_length=2, max_length=100)):
+    """Resolve a city, address, or destination to coordinates without
+    retaining the query or building location history."""
+    try:
+        return {"results": search_locations(q)}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Location search is temporarily unavailable") from exc
+
 @app.get("/api/v1/oracle/recipe")
 def oracle_recipe():
     """Machine-readable oracle recipe manifest for market factories."""
@@ -197,10 +207,11 @@ def seed_demo_markets():
          dict(metric="precip_probability", operator="gt", threshold=0.5, minimum_scope="nearby_observation_area")),
         ("Will wind exceed 25 mph on this delivery route today?",
          dict(metric="wind_mph", operator="gt", threshold=25, minimum_scope="nearby_observation_area")),
-        ("Will the temperature exceed 100°F at this job site today?",
+        ("Will the temperature exceed 100Â°F at this job site today?",
          dict(metric="temperature_f", operator="gt", threshold=100, minimum_scope="nearby_observation_area")),
     ]:
         question_out, params = market_params_from(MarketCreateRequest(question=question, **condition))
         presets.append((question_out, params, 60, 40))
     seeded = market_book.seed_demo(presets)
     return {"markets": market_book.list_markets(), "seeded": seeded}
+
