@@ -105,6 +105,13 @@ def test_invalid_market_request_rejected(client):
     assert res.status_code == 422
 
 
+def test_recipe_manifest_served(client):
+    d = client.get("/api/v1/oracle/recipe").json()
+    assert d["recipe_id"] == "boundarycast-weather-oracle-v1"
+    assert d["resolution_endpoint"]["path"] == "/api/v1/oracle/resolve"
+    assert set(d["outcomes"]) == {"YES", "NO", "UNRESOLVED"}
+
+
 def test_ui_has_oracle_mode():
     index_html = (PROJECT_ROOT / "apps" / "web" / "index.html").read_text(encoding="utf-8")
     app_js = (PROJECT_ROOT / "apps" / "web" / "app.js").read_text(encoding="utf-8")

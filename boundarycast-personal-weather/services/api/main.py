@@ -18,7 +18,7 @@ from boundarycast_api.foresight_proxy.microclimate_adjuster import build_forecas
 from boundarycast_api.gatekeeper_lite.evaluator import evaluate_gatekeeper
 from boundarycast_api.artifacts.artifact import create_artifact
 from boundarycast_api.artifacts.replay import verify_artifact_chain
-from boundarycast_api.oracle.market_resolution import resolve_market
+from boundarycast_api.oracle.market_resolution import resolve_market, ORACLE_RECIPE_MANIFEST
 
 ROOT = Path(__file__).resolve().parents[2]
 APP_DIR = ROOT / "apps" / "web"
@@ -72,6 +72,11 @@ def evaluate_governed_forecast(req: PersonalForecastRequest):
 @app.post("/api/v1/personal-forecast")
 def personal_forecast(req: PersonalForecastRequest):
     return evaluate_governed_forecast(req)
+
+@app.get("/api/v1/oracle/recipe")
+def oracle_recipe():
+    """Machine-readable oracle recipe manifest for market factories."""
+    return ORACLE_RECIPE_MANIFEST
 
 @app.post("/api/v1/oracle/resolve")
 def oracle_resolve(req: MarketResolutionRequest):
