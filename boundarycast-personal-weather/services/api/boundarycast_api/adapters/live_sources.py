@@ -1,8 +1,8 @@
 """Live public weather evidence: Open-Meteo forecasts + NWS alerts.
 
 No API keys, no accounts. Enabled when BOUNDARYCAST_LIVE_EVIDENCE=1 and
-the request is not in demo mode; every call is wrapped so any failure â€”
-offline, slow, non-US point for alerts, schema drift â€” falls back to the
+the request is not in demo mode; every call is wrapped so any failure —
+offline, slow, non-US point for alerts, schema drift — falls back to the
 deterministic demo stubs, with the source_name always disclosing which
 one you got. Coordinates are shared with these public providers for the
 live request only (see docs/privacy-zero-cache.md); responses are cached
@@ -112,7 +112,7 @@ def live_official_forecast(lat, lon):
 
 
 def live_observation(lat, lon):
-    # Open-Meteo's current block is model-interpolated at the exact point â€”
+    # Open-Meteo's current block is model-interpolated at the exact point —
     # disclosed in the source name, distance 0 by construction.
     data = _forecast_payload(lat, lon)
     current = data["current"]
