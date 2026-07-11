@@ -38,7 +38,7 @@ _POLICY_PACKS = None
 
 def get_policy_packs():
     """Policy packs are versioned files; load once per process. An empty
-    load (e.g. missing directory at boot) is never cached â€” every decision
+    load (e.g. missing directory at boot) is never cached — every decision
     must cite the real active packs or keep retrying."""
     global _POLICY_PACKS
     if not _POLICY_PACKS:
@@ -207,7 +207,7 @@ def seed_demo_markets():
          dict(metric="precip_probability", operator="gt", threshold=0.5, minimum_scope="nearby_observation_area")),
         ("Will wind exceed 25 mph on this delivery route today?",
          dict(metric="wind_mph", operator="gt", threshold=25, minimum_scope="nearby_observation_area")),
-        ("Will the temperature exceed 100Â°F at this job site today?",
+        ("Will the temperature exceed 100°F at this job site today?",
          dict(metric="temperature_f", operator="gt", threshold=100, minimum_scope="nearby_observation_area")),
     ]:
         question_out, params = market_params_from(MarketCreateRequest(question=question, **condition))
