@@ -170,10 +170,10 @@ $('resolve').addEventListener('click', async () => {
 
 $('geo').addEventListener('click', () => {
   if (!navigator.geolocation) {
-    $('tourStatus').textContent = 'Geolocation unavailable in this browser — using demo coordinates.';
+    $('locationStatus').textContent = 'Geolocation unavailable in this browser — using demo coordinates.';
     return;
   }
-  $('tourStatus').textContent = 'Locating…';
+  $('locationStatus').textContent = 'Locating…';
   navigator.geolocation.getCurrentPosition((pos) => {
     $('lat').value = pos.coords.latitude.toFixed(4);
     $('lon').value = pos.coords.longitude.toFixed(4);
@@ -182,12 +182,12 @@ $('geo').addEventListener('click', () => {
     activeLocationKind = 'live device location';
     showActiveLocation();
     const accuracy = Math.round(pos.coords.accuracy || 25);
-    $('tourStatus').textContent = accuracy <= 250
+    $('locationStatus').textContent = accuracy <= 250
       ? `Using your live location (accurate within ${accuracy} m) — never stored.`
       : `Device location is only accurate within ${accuracy} m. Exact scope requires 250 m or better; enable precise location services and retry.`;
     $('run').click();
   }, () => {
-    $('tourStatus').textContent = 'Location permission denied — using demo coordinates.';
+    $('locationStatus').textContent = 'Location permission denied — using demo coordinates.';
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 });
 
@@ -222,58 +222,6 @@ $('destinationForm').addEventListener('submit', async (event) => {
     });
   } catch (error) {
     target.innerHTML = `<p>Could not search locations. ${esc(String(error))}</p>`;
-  }
-});
-
-// --- Judge tour: auto-runs the 4-beat demo ---
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function setStrongEvidence() {
-  $('surface').value = 'open'; $('shade').value = 'partial'; $('wind').value = 'moderate';
-  $('elevation').value = '16'; $('water').value = 'true'; $('urban').value = 'high';
-}
-
-function clearEvidence() {
-  $('surface').value = ''; $('shade').value = ''; $('wind').value = '';
-  $('elevation').value = ''; $('water').value = ''; $('urban').value = '';
-}
-
-$('tour').addEventListener('click', async () => {
-  const btn = $('tour');
-  const say = (t) => { $('tourStatus').textContent = t; };
-  btn.disabled = true;
-  try {
-    say('Beat 1 — strong evidence: exact-location forecast, PERMIT…');
-    $('scenario').value = 'normal';
-    $('requestedScope').value = 'exact_location';
-    setStrongEvidence();
-    $('run').click();
-    await fetch('/api/v1/markets/seed-demo', { method: 'POST' });
-    await sleep(3000);
-
-    say('Beat 2 — resolving a seeded market through the oracle…');
-    await loadMarkets();
-    const settleBtn = document.querySelector('[data-settle]');
-    if (settleBtn) { settleBtn.click(); await sleep(3000); }
-
-    say('Beat 3 — weak evidence + exact-location demanded: the oracle refuses…');
-    clearEvidence();
-    $('minScope').value = 'exact_location';
-    $('market').value = 'temp100';
-    $('resolve').click();
-    await sleep(3200);
-
-    say('Beat 4 — official alert governs: alert market resolves YES (official)…');
-    $('scenario').value = 'alert';
-    $('minScope').value = 'official_forecast_area';
-    $('market').value = 'alert';
-    $('resolve').click();
-    await sleep(3200);
-    $('scenario').value = 'normal';
-    say('Tour complete — every decision above is a hash-chained, replayable artifact. Scroll for details.');
-  } finally {
-    btn.disabled = false;
   }
 });
 
