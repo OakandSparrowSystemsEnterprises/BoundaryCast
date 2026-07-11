@@ -150,7 +150,7 @@ $('resolve').addEventListener('click', async () => {
       <div class="grid">
         <div class="pill"><small>Resolution basis scope</small><br><strong>${label(basis.claim_scope)}</strong></div>
         <div class="pill"><small>Market minimum scope</small><br><strong>${label(basis.requested_minimum_scope)}</strong></div>
-        <div class="pill"><small>Gatekeeper verdict</small><br><strong>${label(basis.gatekeeper_verdict)}</strong></div>
+        <div class="pill"><small>BoundaryCast verdict</small><br><strong>${label(basis.gatekeeper_verdict)}</strong></div>
         <div class="pill"><small>Evidence score</small><br><strong>${basis.evidence_score}</strong></div>
         <div class="pill"><small>Uncertainty</small><br><strong>${label(basis.uncertainty)}</strong></div>
         <div class="pill"><small>Observed value</small><br><strong>${d.condition.observed_value ?? '—'}</strong></div>
@@ -181,11 +181,14 @@ $('geo').addEventListener('click', () => {
     activeLocationName = `Current location (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`;
     activeLocationKind = 'live device location';
     showActiveLocation();
-    $('tourStatus').textContent = 'Using your live location — used for this request only, never stored.';
+    const accuracy = Math.round(pos.coords.accuracy || 25);
+    $('tourStatus').textContent = accuracy <= 100
+      ? `Using your live location (accurate within ${accuracy} m) — never stored.`
+      : `Device location is only accurate within ${accuracy} m. Exact scope requires 100 m or better; enable precise location services and retry.`;
     $('run').click();
   }, () => {
     $('tourStatus').textContent = 'Location permission denied — using demo coordinates.';
-  });
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 });
 
 // --- Destination lookup: separate from device location, zero history ---
@@ -274,7 +277,7 @@ $('tour').addEventListener('click', async () => {
   }
 });
 
-// --- Market Board ---
+// --- Call the Weather ---
 
 function scenarioOverrides() {
   const scenario = $('scenario').value;
@@ -308,7 +311,7 @@ function marketCard(m) {
         </div>` : `
         <div class="market-resolution">
           <strong>${esc(res.resolution)}</strong>${res.resolution_confidence ? ` (${esc(res.resolution_confidence)})` : ''} — ${esc(res.detail)}<br>
-          <small>verdict: ${res.gatekeeper_verdict} · claim scope: ${label(res.claim_scope)} · artifact <code>${res.artifact_hash.slice(0, 14)}...</code></small><br>
+          <small>BoundaryCast verdict: ${res.gatekeeper_verdict} · claim scope: ${label(res.claim_scope)} · artifact <code>${res.artifact_hash.slice(0, 14)}...</code></small><br>
           <small>reason codes: ${[...(res.scope_reason_codes ?? []), ...(res.reason_codes ?? [])].map(x => `<code>${x}</code>`).join(' ') || '<code>none</code>'}</small>
           ${payoutRows ? `<br>${payoutRows}` : ''}
         </div>`}
@@ -327,10 +330,10 @@ async function loadMarkets() {
     const cf = data.crowd_feedback;
     const crowdLine = cf && cf.markets_scored
       ? `<p class="crowd-line">🏆 Crowd vs oracle: ${cf.crowd_correct}/${cf.markets_scored} calls right · Brier ${cf.crowd_brier_score} — your stakes are votes, recorded as a calibration signal the forecast can train on.</p>`
-      : '<p class="crowd-line">🏆 Stake YES/NO below — the crowd\'s calls get scored against the oracle and recorded as a training signal.</p>';
+      : '<p class="crowd-line">🏆 Call YES or NO below — the crowd\'s calls get scored against BoundaryCast and recorded as a training signal.</p>';
     $('marketBoard').innerHTML = replayLine + crowdLine + (data.markets.length
       ? data.markets.map(marketCard).join('')
-      : '<p>No markets yet. Seed the demo markets.</p>');
+      : '<p>No weather calls yet. Load the demonstration calls.</p>');
   } catch (error) {
     $('marketBoard').innerHTML = `<p>Could not load markets. ${esc(String(error))}</p>`;
   }
@@ -417,8 +420,8 @@ $('run').addEventListener('click', async () => {
     } catch { replayStatus = 'recorded (replay check unavailable)'; }
 
     const b = c.uncertainty_interval;
-    const alertChip = v.claim_scope === 'official_alert_only'
-      ? '<span class="chip chip-alert">⚠ Official alert governs</span>'
+    const alertChip = c.alert_active
+      ? `<span class="chip chip-alert">⚠ ${esc(c.alert_headline || 'Official alert active')}</span>`
       : '<span class="chip chip-ok">No official alerts</span>';
     const live = Object.values(data.evidence_sources ?? {}).some(s => String(s).includes('live'));
     const unavailable = Object.values(data.evidence_sources ?? {}).some(s => String(s).includes('unavailable'));
