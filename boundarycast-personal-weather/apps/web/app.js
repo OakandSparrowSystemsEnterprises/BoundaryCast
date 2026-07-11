@@ -58,7 +58,7 @@ function scopeLadderHtml(v) {
 }
 
 function checksHtml(e) {
-  const entries = Object.entries(e).filter(([, val]) => typeof val === 'boolean');
+  const entries = Object.entries(e).filter(([k, val]) => typeof val === 'boolean' && k !== 'verdict_replayable');
   const passing = entries.filter(([, val]) => val).length;
   const pills = entries.map(([k, val]) =>
     `<span class="check ${val ? 'ok' : 'bad'}">${val ? '✓' : '✗'} ${esc(label(k))}</span>`).join('');
@@ -424,7 +424,7 @@ $('run').addEventListener('click', async () => {
       ${fallbackNote}
       ${scopeLadderHtml(v)}
       <details class="govdetail">
-        <summary>Full governance detail — verdict, evidence, uncertainty, artifact</summary>
+        <summary>Full forecast detail — verdict, evidence, uncertainty</summary>
         <h2>Forecast Verdict</h2>
         <div class="verdict">${label(v.product_verdict)}</div>
         <div class="grid">
@@ -445,9 +445,6 @@ $('run').addEventListener('click', async () => {
         <p>${v.scope_reason_codes.map(x => `<code>${x}</code>`).join(' ')}</p>
         <h3>Why this verdict?</h3>
         <p>${v.reason_codes.length ? v.reason_codes.map(x => `<code>${x}</code>`).join(' ') : 'Evidence is sufficient for publication.'}</p>
-        <h3>Artifact Status</h3>
-        <p><code>${data.artifact.artifact_hash.slice(0, 18)}...</code> — ${replayStatus}<br>
-        <small>location binding: <code>${data.artifact.location_binding_type}</code> · zero-cache: no identity, no location history</small></p>
       </details>
     `;
   } catch (error) {
