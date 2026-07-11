@@ -1,32 +1,32 @@
-BoundaryCast Personal Weather (v3)
-BoundaryCast is your weather, checked before it speaks. It travels with you and gives the most specific forecast claim the evidence supports, from exact-location weather down to official-area guidance, without pretending and without storing your location history.
+# BoundaryCast
 
-It does not try to out-Windy Windy. Instead, it improves on static weather pages by evaluating what can responsibly be said about the weather at an individual user's exact location: official forecasts, observations, alerts, microclimate context, evidence freshness, uncertainty, and policy rules are all checked before publishing a forecast verdict. Every decision is bound to a replayable artifact.
+**Your weather, checked before it speaks.**
 
-What's new in v3
-Claim Scope — a graceful-degradation layer (exact_location, microclimate_adjusted, nearby_observation_area, official_forecast_area, official_alert_only, unsupported_specific_claim). The verdict answers may the system speak?; the scope answers how specific may it be? See docs/v3-claim-scope-and-zero-cache.md.
-Zero-cache privacy — no account, no identity, no location history; artifacts carry a minimized location binding, never raw real coordinates. See docs/privacy-zero-cache.md.
-Public boundary
-This repository is public-safe. It does not include QTP, full Manifold equations, SIP constitutional derivations, production Gatekeeper invariants, claim-altitude math, universal corridor operators, private OASSE thresholds, enterprise policy-pack compiler internals, QuickOps labor/cash/safety policy packs, or consortium math.
+BoundaryCast answers one question most weather products dodge: *how much can you actually trust a forecast for the exact spot you're standing on?* It checks the evidence first — official forecast, nearby observations, active alerts, microclimate context, freshness, uncertainty — and then makes the most specific claim that evidence supports. Nothing more. Every answer ships with a hash-chained, replayable proof of how it was decided.
 
-Stack
-User Exact Location -> Microclimate Context -> Public Weather Evidence -> Weather Ontology -> Epistemology Scaffold -> Claim Scope Decision -> Policy Packs -> Gatekeeper-Lite -> Forecast Verdict -> Artifact Ledger -> Replay Verification.
+## What it does
 
-Run no Docker
+**🎯 Scope-aware personal forecasts.** When the evidence is strong, you get an exact-location forecast. When it isn't, BoundaryCast doesn't go silent and doesn't pretend — it degrades gracefully (microclimate-adjusted → nearby-observation area → official forecast area) and tells you which tier you're getting and why. Official alerts always govern; nothing softens them.
+
+**⚖️ A governed oracle for prediction markets.** The same governed claim resolves weather-dependent markets: "Will it rain at this outdoor event between 2 and 5 PM?" resolves YES / NO / UNRESOLVED against an evidence-bound artifact. The market creator picks the minimum claim scope they'll accept — that *is* the resolution rule. Below it, the oracle refuses and routes to arbitration instead of guessing.
+
+**🏛️ A market factory around the oracle.** Create a market, stake play-money YES/NO into parimutuel pools, click *Resolve with BoundaryCast*, and watch payouts settle against the artifact — outcome, claim scope, reason codes, artifact hash, replay proof.
+
+**🔒 Zero-cache privacy.** No account, no identity, no location history. Your position is used for the live request only; durable artifacts carry a minimized location binding (rounded / grid-hash / synthetic), never your raw coordinates.
+
+**📜 Receipts, always.** Every decision is a hash-chained artifact. Disputes replay the record — and tampering fails verification loudly.
+
+## Try it
+
+```bash
 cd boundarycast-personal-weather
-.\scripts\run_no_docker.ps1
-Or on macOS/Linux:
+bash scripts/run_no_docker.sh        # or .\scripts\run_no_docker.ps1 on Windows
+```
 
-cd boundarycast-personal-weather
-bash scripts/run_no_docker.sh
-Then open http://localhost:8787/ui
+Open http://localhost:8787/ui — seed the demo markets, flip the evidence scenarios, and watch the oracle refuse to over-claim. Pitch deck at `/ui/pitch.html`.
 
-Demo endpoints
-GET /health
-POST /api/v1/personal-forecast
-GET /api/v1/replay
-Tests
-cd services/api
-pip install -r requirements-dev.txt
-python -m pytest tests/
-13 regression tests cover claim scope, graceful degradation, severity precedence, reason-code/pack alignment, artifact chain tamper detection, and location minimization.
+The full project — engine, market factory, OWL ontology, deontic policy packs, formal epistemology, 45 tests, docs — lives in [`boundarycast-personal-weather/`](boundarycast-personal-weather/).
+
+## License
+
+Proprietary source-available — © 2026 Oak & Sparrow Systems Enterprise LLC. Evaluation, demonstration, and hackathon judging permitted; see [LICENSE](boundarycast-personal-weather/LICENSE).
