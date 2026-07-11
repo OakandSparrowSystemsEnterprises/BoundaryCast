@@ -115,6 +115,12 @@
       </p>
 
       <div class="terms-row" id="termsRow">
+        <div class="agreement-scroll">
+          <p><strong>Master Service Agreement</strong></p>
+          <p>This Master Service Agreement ("MSA") governs your use of the BoundaryCast demonstration service. The service is provided for demonstration purposes only using play credits. No real money is involved, held, or transferred. BoundaryCast does not store your precise location. Coordinates are used only for the live forecast request and are never saved, logged, or shared. By using this service you agree to use it responsibly and in accordance with all applicable laws. This is not a licensed gambling or financial product.</p>
+          <p><strong>End User License Agreement</strong></p>
+          <p>This End User License Agreement ("EULA") grants you a limited, non-exclusive, non-transferable license to use the BoundaryCast demonstration application for personal, non-commercial purposes. You may not reverse-engineer, redistribute, or use the service to transmit harmful or unlawful content. The service is provided "as-is" without warranty of any kind. BoundaryCast reserves the right to modify or discontinue the service at any time. Play credits have no monetary value and cannot be exchanged for real currency.</p>
+        </div>
         <label class="terms-label">
           <input type="checkbox" id="termsAccepted" />
           I have read and accept the <a href="/ui/msa.html" target="_blank" rel="noopener noreferrer">Master Service Agreement</a> and <a href="/ui/eula.html" target="_blank" rel="noopener noreferrer">End User License Agreement</a>, and I understand this feature uses demonstration credits only — not real money.
@@ -122,11 +128,13 @@
         <span id="termsError" class="terms-error" role="alert" hidden>You must accept the terms before placing or joining a call.</span>
       </div>
 
-      <div class="board-actions">
-        <button id="seedMarkets">Load weather calls</button>
-        <button id="refreshMarkets" class="secondary">Refresh calls</button>
+      <div id="callWeatherContent" hidden>
+        <div class="board-actions">
+          <button id="seedMarkets">Load weather calls</button>
+          <button id="refreshMarkets" class="secondary">Refresh calls</button>
+        </div>
+        <div id="marketBoard"><p>Load the demonstration calls to populate the board.</p></div>
       </div>
-      <div id="marketBoard"><p>Load the demonstration calls to populate the board.</p></div>
     </section>
   </main>
   <script src="app.js"></script>

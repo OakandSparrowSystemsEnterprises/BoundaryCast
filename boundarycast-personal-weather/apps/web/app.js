@@ -232,6 +232,23 @@ let _termsAccepted = false;
 $('termsAccepted').addEventListener('change', () => {
   _termsAccepted = $('termsAccepted').checked;
   if (_termsAccepted) $('termsError').hidden = true;
+  $('callWeatherContent').hidden = !_termsAccepted;
+  if (_termsAccepted) {
+    $('termsRow').style.display = 'none';
+    let confirmed = document.getElementById('termsConfirmed');
+    if (!confirmed) {
+      confirmed = document.createElement('p');
+      confirmed.id = 'termsConfirmed';
+      confirmed.style.cssText = 'color:#166534;font-weight:600;margin:8px 0;';
+      confirmed.textContent = '✓ Terms accepted.';
+      $('termsRow').insertAdjacentElement('afterend', confirmed);
+    }
+    confirmed.style.display = '';
+  } else {
+    $('termsRow').style.display = '';
+    const confirmed = document.getElementById('termsConfirmed');
+    if (confirmed) confirmed.style.display = 'none';
+  }
 });
 
 function requireTerms() {
