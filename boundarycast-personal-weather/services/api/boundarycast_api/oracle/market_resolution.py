@@ -139,10 +139,10 @@ def resolve_market(req, forecast):
                            f"The evidence supports a '{claim_scope}' claim, but this market requires at least '{req.minimum_scope}'.")
 
     if req.metric == "alert_active":
-        observed = 0
+        observed = forecast["claim"].get("alert_active", 0)
         holds = OPERATORS[req.operator](observed, req.threshold)
         return _record(req, forecast, resolution="YES" if holds else "NO",
-                       detail=f"Official alerts were checked and none are active; alert_active = {observed} {req.operator} {req.threshold} is {str(holds).lower()}.",
+                       detail=f"Official alerts were checked; alert_active = {observed} {req.operator} {req.threshold} is {str(holds).lower()}.",
                        observed_value=observed)
 
     observed = forecast["claim"].get(req.metric)
@@ -155,3 +155,4 @@ def resolve_market(req, forecast):
     return _record(req, forecast, resolution=outcome,
                    detail=f"{req.metric} = {observed} {req.operator} {req.threshold} is {str(holds).lower()} at claim scope '{claim_scope}'.",
                    observed_value=observed)
+
