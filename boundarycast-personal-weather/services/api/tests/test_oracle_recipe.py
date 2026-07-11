@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import main
+from boundarycast_api.markets import market_book
 
 PROJECT_ROOT = Path(main.__file__).resolve().parents[2]
 
@@ -22,6 +23,7 @@ FULL_MICROCLIMATE = {
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "ARTIFACT_PATH", tmp_path / "forecast-artifacts.ndjson")
+    market_book.reset_book()
     return TestClient(main.app)
 
 
@@ -115,7 +117,7 @@ def test_recipe_manifest_served(client):
 def test_ui_has_oracle_mode():
     index_html = (PROJECT_ROOT / "apps" / "web" / "index.html").read_text(encoding="utf-8")
     app_js = (PROJECT_ROOT / "apps" / "web" / "app.js").read_text(encoding="utf-8")
-    assert "Oracle Mode" in index_html
+    assert "Forecast Future Weather" in index_html
     assert "minScope" in index_html
     assert "/api/v1/oracle/resolve" in app_js
     assert "Resolution record" in app_js

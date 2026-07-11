@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BoundaryCast | Pitch</title>
+<style>
+  :root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  body { margin: 0; background: #0b1c2c; color: #eef4f8; }
+  .slide { display: none; min-height: 100vh; box-sizing: border-box; padding: 7vh 9vw; flex-direction: column; justify-content: center; }
+  .slide.active { display: flex; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-weight: 700; color: #7db4e0; font-size: 15px; }
+  h1 { font-size: clamp(34px, 5.5vw, 64px); line-height: 1.05; margin: 10px 0 18px; }
+  h2 { font-size: clamp(26px, 4vw, 44px); line-height: 1.1; margin: 8px 0 20px; }
+  p, li { font-size: clamp(17px, 1.9vw, 23px); line-height: 1.5; color: #cfe0ee; }
+  li { margin: 10px 0; }
+  .quote { font-size: clamp(20px, 2.6vw, 30px); font-style: italic; color: #ffffff; border-left: 5px solid #f59e0b; padding-left: 22px; margin: 18px 0; line-height: 1.4; }
+  .badge { display: inline-block; background: #f59e0b; color: #0b1c2c; font-weight: 800; border-radius: 999px; padding: 6px 16px; margin-right: 8px; font-size: 15px; }
+  .scopes { font-family: ui-monospace, monospace; font-size: clamp(15px, 1.7vw, 21px); color: #a7f3d0; }
+  .foot { position: fixed; bottom: 18px; right: 24px; color: #64748b; font-size: 14px; }
+  .hint { position: fixed; bottom: 18px; left: 24px; color: #64748b; font-size: 14px; }
+  strong { color: #ffffff; }
+  code { background: #12324e; border-radius: 6px; padding: 2px 8px; color: #a7f3d0; font-size: .9em; }
+</style>
+</head>
+<body>
+
+<section class="slide active">
+  <p class="eyebrow">Oak &amp; Sparrow Systems Enterprise LLC</p>
+  <h1>Market Factory Lite<br>+ BoundaryCast Oracle Recipe</h1>
+  <p class="quote">Prediction markets fail when resolution is vague. BoundaryCast makes weather markets resolvable by turning a local weather claim into an evidence-bound, scope-aware, replayable oracle artifact.</p>
+</section>
+
+<section class="slide">
+  <p class="eyebrow">The problem</p>
+  <h2>Weather data is a commodity.<br>Resolution integrity is not.</h2>
+  <ul>
+    <li>"Will it rain at the event?" needs an answer that is specific about <strong>where</strong>, honest about <strong>how much evidence supports that specificity</strong>, and <strong>auditable</strong> after the fact.</li>
+    <li>Vague resolution rules kill markets: disputes, refunds, dead liquidity.</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <p class="eyebrow">What we built</p>
+  <h2>A governed weather oracle recipe</h2>
+  <p class="quote">Anyone can create a weather-dependent market. Not everyone can write safe resolution rules. Our recipe packages the resolution logic: what evidence counts, when official alerts govern, when the claim is exact versus area-level, and when the oracle must abstain.</p>
+  <p class="scopes">location → evidence → epistemology → claim scope → deontic policy → gatekeeper verdict → hash-chained artifact → replay</p>
+</section>
+
+<section class="slide">
+  <p class="eyebrow">The key idea</p>
+  <h2>Claim Scope <em>is</em> the resolution rule</h2>
+  <p class="scopes">exact_location → microclimate_adjusted → nearby_observation_area → official_forecast_area</p>
+  <ul>
+    <li>The oracle states <strong>how specific</strong> its claim is; the market creator sets the <strong>minimum scope</strong> it will accept.</li>
+    <li>Evidence below the minimum never silently resolves — it goes <strong>UNRESOLVED → arbitration</strong> with an explicit reason code.</li>
+    <li><strong>The oracle never pretends.</strong></li>
+  </ul>
+</section>
+
+<section class="slide">
+  <p class="eyebrow">Live demo</p>
+  <h2>The complete loop</h2>
+  <ul>
+    <li><span class="badge">1</span>Create: "Will it rain at this outdoor event between 2 and 5 PM?"</li>
+    <li><span class="badge">2</span>The market cites the BoundaryCast recipe: location, window, scope rules, alert supremacy.</li>
+    <li><span class="badge">3</span>Stake play-money YES / NO into parimutuel pools.</li>
+    <li><span class="badge">4</span>One click: <strong>Resolve with BoundaryCast</strong>.</li>
+    <li><span class="badge">5</span>Payout with receipts: outcome, claim scope, reason codes, artifact hash, replay proof.</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <p class="eyebrow">Governance guarantees — 36 regression tests</p>
+  <h2>Built to be distrusted</h2>
+  <ul>
+    <li><strong>Official alert supremacy</strong> — alerts resolve alert markets YES and freeze condition markets. Nothing softens an alert.</li>
+    <li><strong>Strict severity</strong> — <code>BLOCK &gt; PROTOCOL &gt; ABSTAIN &gt; CAUTION &gt; PERMIT</code>; a MUST rule is never downgraded.</li>
+    <li><strong>Replayable artifacts</strong> — hash-chained; tampering fails verification with a nonzero exit.</li>
+    <li><strong>Zero-cache privacy</strong> — no identity, no location history, minimized location bindings.</li>
+    <li><strong>Formal layer</strong> — full OWL ontology, deontic policy packs, formal epistemology.</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <p class="eyebrow">Beyond weather</p>
+  <h2>A recipe pattern, not a weather app</h2>
+  <ul>
+    <li>Machine-readable manifest — <code>GET /api/v1/oracle/recipe</code> — any market factory can list BoundaryCast as a selectable oracle recipe today.</li>
+    <li>The pattern generalizes to any market where resolution needs evidence discipline: local city markets, founder hedge markets, event insurance.</li>
+    <li><strong>Honest scope:</strong> demo adapters are stubs; the governance is fully real. Production math loads through a private provider seam — proprietary IP never enters the public repo.</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <p class="eyebrow">Close</p>
+  <h2>The smallest complete market factory around a governed oracle</h2>
+  <ul>
+    <li>Live demo · replayable artifacts · formal ontology · 36 passing tests</li>
+  </ul>
+  <p class="quote">BoundaryCast: your weather, checked before it speaks — now checking prediction markets before they pay out.</p>
+</section>
+
+<p class="hint">← → arrow keys · click to advance</p>
+<p class="foot" id="counter"></p>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  let i = 0;
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    document.getElementById('counter').textContent = `${i + 1} / ${slides.length}`;
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') show(i + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') show(i - 1);
+  });
+  document.addEventListener('click', () => show(i + 1));
+  show(0);
+</script>
+</body>
+</html>

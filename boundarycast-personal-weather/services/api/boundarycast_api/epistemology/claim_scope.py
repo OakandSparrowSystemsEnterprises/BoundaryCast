@@ -119,6 +119,18 @@ def determine_claim_scope(requested_scope, checks, evidence):
             "fallback_applied": False,
         }
 
+    # Insufficient knowledge (no official anchor or unattributable sources)
+    # forbids every publishable scope, even ones whose individual support
+    # predicate holds — the scope decision must agree with the verdict the
+    # gatekeeper will reach, so claim, verdict, and artifact stay coherent.
+    if checks.get("knowledge_state") == "insufficient":
+        return {
+            "requested_scope": requested_scope,
+            "claim_scope": "unsupported_specific_claim",
+            "scope_reason_codes": [UNSUPPORTED_REASON_CODE],
+            "fallback_applied": False,
+        }
+
     if scope_supported(requested_scope, checks):
         return {
             "requested_scope": requested_scope,

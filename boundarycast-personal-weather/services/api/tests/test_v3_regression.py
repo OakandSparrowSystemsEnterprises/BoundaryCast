@@ -78,6 +78,18 @@ def test_strong_exact_evidence(client):
         assert field in claim, f"claim missing {field}"
 
 
+def test_uncertainty_band_present_and_sane(client):
+    data = forecast(client, **FULL_MICROCLIMATE)
+    band = data["claim"]["uncertainty_interval"]
+    temp = data["claim"]["temperature_f"]
+    assert band["temperature_low_f"] < temp < band["temperature_high_f"]
+    assert band["spread_f"] > 0
+    assert "not private math" in band["method"]
+    # No official forecast -> no band, never a crash.
+    missing = forecast(client, simulate_no_official_forecast=True)
+    assert missing["claim"]["uncertainty_interval"] is None
+
+
 # 4. Medium microclimate evidence produces PERMIT or PERMIT_WITH_CAUTION + microclimate_adjusted.
 def test_medium_microclimate_scope(client):
     data = forecast(client, precision_meters=5000, **FULL_MICROCLIMATE)

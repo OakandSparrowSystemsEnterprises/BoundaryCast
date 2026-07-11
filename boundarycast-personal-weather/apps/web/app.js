@@ -16,6 +16,13 @@ function boolOrNull(v) {
 
 function label(v) { return String(v ?? 'unknown').replaceAll('_', ' '); }
 
+// Escape anything user- or API-supplied before it reaches innerHTML.
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 const SCOPE_LABELS = {
   exact_location: 'Exact location',
   microclimate_adjusted: 'Microclimate adjusted',
@@ -25,11 +32,46 @@ const SCOPE_LABELS = {
   unsupported_specific_claim: 'Unsupported specific claim',
 };
 
+const SCOPE_LADDER = ['exact_location', 'microclimate_adjusted', 'nearby_observation_area', 'official_forecast_area'];
+
+function scopeLadderHtml(v) {
+  const special = v.claim_scope === 'official_alert_only' || v.claim_scope === 'unsupported_specific_claim';
+  const rows = SCOPE_LADDER.map(s => {
+    const granted = v.claim_scope === s;
+    const requested = v.requested_scope === s;
+    return `<div class="rung ${granted ? 'granted' : ''}${requested && !granted ? ' requested' : ''}">
+      <span class="rung-dot"></span><span class="rung-name">${label(s)}</span>
+      ${requested ? '<span class="rung-tag">requested</span>' : ''}
+      ${granted ? '<span class="rung-tag got">granted</span>' : ''}
+    </div>`;
+  }).join('');
+  const specialRow = special
+    ? `<div class="rung special granted"><span class="rung-dot"></span><span class="rung-name">${label(v.claim_scope)}</span><span class="rung-tag got">${v.claim_scope === 'official_alert_only' ? 'governs' : 'withheld'}</span></div>`
+    : '';
+  return `<div class="ladder"><small>Claim scope ladder — how specific the evidence lets us be</small>${rows}${specialRow}</div>`;
+}
+
+function checksHtml(e) {
+  const entries = Object.entries(e).filter(([, val]) => typeof val === 'boolean');
+  const passing = entries.filter(([, val]) => val).length;
+  const pills = entries.map(([k, val]) =>
+    `<span class="check ${val ? 'ok' : 'bad'}">${val ? '✓' : '✗'} ${esc(label(k))}</span>`).join('');
+  return `<details class="checks"><summary>Epistemology — ${passing}/${entries.length} checks passing</summary><div class="check-grid">${pills}</div></details>`;
+}
+
+function bandHtml(c) {
+  const b = c.uncertainty_interval;
+  if (!b) return '';
+  return `<div class="band"><small>Uncertainty band (public proxy)</small>
+    <div class="band-bar"><span>${esc(b.temperature_low_f)}°F</span><div class="band-track"><div class="band-fill"></div></div><span>${esc(b.temperature_high_f)}°F</span></div>
+    <small>±${esc(b.spread_f)}°F from observation distance, evidence staleness, and microclimate context</small></div>`;
+}
+
 function showError(message) {
   $('result').innerHTML = `
     <h2>Forecast Verdict</h2>
     <div class="verdict">boundary failed</div>
-    <p>${message}</p>
+    <p>${esc(message)}</p>
   `;
 }
 
@@ -41,8 +83,13 @@ const MARKETS = {
   alert: { metric: 'alert_active', operator: 'gt', threshold: 0 },
 };
 
+function coordinatesValid() {
+  const lat = numberOrNull($('lat').value);
+  const lon = numberOrNull($('lon').value);
+  return lat !== null && lon !== null && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+}
+
 function currentEvidenceBody() {
-  const scenario = $('scenario').value;
   return {
     latitude: numberOrNull($('lat').value) ?? 37.7974,
     longitude: numberOrNull($('lon').value) ?? -121.2161,
@@ -54,13 +101,15 @@ function currentEvidenceBody() {
     nearby_water: boolOrNull($('water').value),
     urban_density: valueOrNull($('urban').value),
     demo_mode: true,
-    simulate_alert: scenario === 'alert',
-    simulate_no_official_forecast: scenario === 'no_forecast' || scenario === 'nothing',
-    simulate_no_observation: scenario === 'no_observation' || scenario === 'nothing'
+    ...scenarioOverrides()
   };
 }
 
 $('resolve').addEventListener('click', async () => {
+  if (!coordinatesValid()) {
+    $('oracleResult').innerHTML = '<p>Latitude must be between -90 and 90 and longitude between -180 and 180.</p>';
+    return;
+  }
   const marketKey = $('market').value;
   const body = {
     ...currentEvidenceBody(),
@@ -80,16 +129,16 @@ $('resolve').addEventListener('click', async () => {
     });
     if (!res.ok) {
       const detail = await res.text();
-      $('oracleResult').innerHTML = `<p>The oracle rejected the request (HTTP ${res.status}). ${detail.slice(0, 300)}</p>`;
+      $('oracleResult').innerHTML = `<p>The oracle rejected the request (HTTP ${res.status}). ${esc(detail.slice(0, 300))}</p>`;
       return;
     }
     const d = await res.json();
     const basis = d.resolution_basis;
     $('oracleResult').innerHTML = `
-      <div class="resolution resolution-${d.resolution}">${d.resolution}</div>
-      ${d.resolution_confidence ? `<p><strong>Confidence:</strong> ${d.resolution_confidence}</p>` : ''}
-      <p>${d.detail}</p>
-      ${d.escalation ? `<p class="fallback">Unresolved (<code>${d.unresolved_reason}</code>) — escalate to <strong>${d.escalation}</strong>. The oracle does not pretend.</p>` : ''}
+      <div class="resolution resolution-${esc(d.resolution)}">${esc(d.resolution)}</div>
+      ${d.resolution_confidence ? `<p><strong>Confidence:</strong> ${esc(d.resolution_confidence)}</p>` : ''}
+      <p>${esc(d.detail)}</p>
+      ${d.escalation ? `<p class="fallback">Unresolved (<code>${esc(d.unresolved_reason)}</code>) — escalate to <strong>${esc(d.escalation)}</strong>. The oracle does not pretend.</p>` : ''}
       <div class="grid">
         <div class="pill"><small>Resolution basis scope</small><br><strong>${label(basis.claim_scope)}</strong></div>
         <div class="pill"><small>Market minimum scope</small><br><strong>${label(basis.requested_minimum_scope)}</strong></div>
@@ -103,10 +152,155 @@ $('resolve').addEventListener('click', async () => {
       <small>Every resolution is bound to a hash-chained, replayable decision artifact.</small></p>
     `;
   } catch (error) {
-    $('oracleResult').innerHTML = `<p>Could not reach the BoundaryCast API. ${String(error)}</p>`;
+    $('oracleResult').innerHTML = `<p>Could not reach the BoundaryCast API. ${esc(String(error))}</p>`;
   } finally {
     button.disabled = false;
   }
+});
+
+// --- Judge tour: auto-runs the 4-beat demo ---
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function setStrongEvidence() {
+  $('surface').value = 'open'; $('shade').value = 'partial'; $('wind').value = 'moderate';
+  $('elevation').value = '16'; $('water').value = 'true'; $('urban').value = 'high';
+}
+
+function clearEvidence() {
+  $('surface').value = ''; $('shade').value = ''; $('wind').value = '';
+  $('elevation').value = ''; $('water').value = ''; $('urban').value = '';
+}
+
+$('tour').addEventListener('click', async () => {
+  const btn = $('tour');
+  const say = (t) => { $('tourStatus').textContent = t; };
+  btn.disabled = true;
+  try {
+    say('Beat 1 — strong evidence: exact-location forecast, PERMIT…');
+    $('scenario').value = 'normal';
+    $('requestedScope').value = 'exact_location';
+    setStrongEvidence();
+    $('run').click();
+    await fetch('/api/v1/markets/seed-demo', { method: 'POST' });
+    await sleep(3000);
+
+    say('Beat 2 — resolving a seeded market through the oracle…');
+    await loadMarkets();
+    const settleBtn = document.querySelector('[data-settle]');
+    if (settleBtn) { settleBtn.click(); await sleep(3000); }
+
+    say('Beat 3 — weak evidence + exact-location demanded: the oracle refuses…');
+    clearEvidence();
+    $('minScope').value = 'exact_location';
+    $('market').value = 'temp100';
+    $('resolve').click();
+    await sleep(3200);
+
+    say('Beat 4 — official alert governs: alert market resolves YES (official)…');
+    $('scenario').value = 'alert';
+    $('minScope').value = 'official_forecast_area';
+    $('market').value = 'alert';
+    $('resolve').click();
+    await sleep(3200);
+    $('scenario').value = 'normal';
+    say('Tour complete — every decision above is a hash-chained, replayable artifact. Scroll for details.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// --- Market Board ---
+
+function scenarioOverrides() {
+  const scenario = $('scenario').value;
+  return {
+    simulate_alert: scenario === 'alert',
+    simulate_no_official_forecast: scenario === 'no_forecast' || scenario === 'nothing',
+    simulate_no_observation: scenario === 'no_observation' || scenario === 'nothing'
+  };
+}
+
+function marketCard(m) {
+  const res = m.resolution;
+  const total = m.pools.YES + m.pools.NO;
+  const yesPct = total > 0 ? Math.round((m.pools.YES / total) * 100) : 50;
+  const payoutRows = (m.payouts ?? []).map(p =>
+    `<small>${esc(p.trader)} (${esc(p.kind)}): ${esc(p.payout)}</small>`).join('<br>');
+  return `
+    <div class="market">
+      <div class="market-q"><strong>${esc(m.question)}</strong></div>
+      <div class="market-meta">
+        <span class="pill-inline">status: <strong>${esc(label(m.status))}</strong></span>
+        <span class="pill-inline">YES pool: ${m.pools.YES}</span>
+        <span class="pill-inline">NO pool: ${m.pools.NO}</span>
+        <span class="pill-inline">implied YES: ${yesPct}%</span>
+      </div>
+      ${m.status === 'open' ? `
+        <div class="market-actions">
+          <button data-stake="YES" data-market="${m.market_id}">Stake 10 on YES</button>
+          <button data-stake="NO" data-market="${m.market_id}">Stake 10 on NO</button>
+          <button data-settle="${m.market_id}" class="settle">Resolve with BoundaryCast</button>
+        </div>` : `
+        <div class="market-resolution">
+          <strong>${esc(res.resolution)}</strong>${res.resolution_confidence ? ` (${esc(res.resolution_confidence)})` : ''} — ${esc(res.detail)}<br>
+          <small>verdict: ${res.gatekeeper_verdict} · claim scope: ${label(res.claim_scope)} · artifact <code>${res.artifact_hash.slice(0, 14)}...</code></small><br>
+          <small>reason codes: ${[...(res.scope_reason_codes ?? []), ...(res.reason_codes ?? [])].map(x => `<code>${x}</code>`).join(' ') || '<code>none</code>'}</small>
+          ${payoutRows ? `<br>${payoutRows}` : ''}
+        </div>`}
+    </div>`;
+}
+
+async function loadMarkets() {
+  try {
+    const [data, replay] = await Promise.all([
+      fetch('/api/v1/markets').then(r => r.json()),
+      fetch('/api/v1/replay').then(r => r.json()).catch(() => null),
+    ]);
+    const replayLine = replay
+      ? `<p class="replay-line">Replay status: ${replay.ok ? `artifact chain verified (${replay.count} artifacts)` : `CHAIN FAILED — ${esc(replay.error)}`}</p>`
+      : '';
+    $('marketBoard').innerHTML = replayLine + (data.markets.length
+      ? data.markets.map(marketCard).join('')
+      : '<p>No markets yet. Seed the demo markets.</p>');
+  } catch (error) {
+    $('marketBoard').innerHTML = `<p>Could not load markets. ${esc(String(error))}</p>`;
+  }
+}
+
+$('seedMarkets').addEventListener('click', async () => {
+  await fetch('/api/v1/markets/seed-demo', { method: 'POST' });
+  loadMarkets();
+});
+$('refreshMarkets').addEventListener('click', loadMarkets);
+
+$('marketBoard').addEventListener('click', async (event) => {
+  const btn = event.target.closest('button');
+  if (!btn) return;
+  try {
+    if (btn.dataset.stake) {
+      await fetch(`/api/v1/markets/${btn.dataset.market}/stake`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ side: btn.dataset.stake, amount: 10, trader: 'you' })
+      });
+    } else if (btn.dataset.settle) {
+      btn.disabled = true;
+      await fetch(`/api/v1/markets/${btn.dataset.settle}/settle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scenarioOverrides())
+      });
+    } else {
+      return;
+    }
+  } catch (error) {
+    $('marketBoard').insertAdjacentHTML('afterbegin',
+      `<p>Market action failed. ${esc(String(error))}</p>`);
+  } finally {
+    btn.disabled = false;
+  }
+  loadMarkets();
 });
 
 $('run').addEventListener('click', async () => {
@@ -157,8 +351,8 @@ $('run').addEventListener('click', async () => {
     $('result').innerHTML = `
       <h2>Forecast Verdict</h2>
       <div class="verdict">${label(v.product_verdict)}</div>
-      <div class="scope-badge scope-${v.claim_scope}">Forecast Scope: ${SCOPE_LABELS[v.claim_scope] ?? label(v.claim_scope)}</div>
-      <p>${c.public_message}</p>
+      <div class="scope-badge scope-${esc(v.claim_scope)}">Forecast Scope: ${SCOPE_LABELS[v.claim_scope] ?? esc(label(v.claim_scope))}</div>
+      <p>${esc(c.public_message)}</p>
       ${fallbackNote}
       <div class="grid">
         <div class="pill"><small>Forecast scope</small><br><strong>${label(v.claim_scope)}</strong></div>
@@ -172,6 +366,9 @@ $('run').addEventListener('click', async () => {
         <div class="pill"><small>Temperature</small><br><strong>${c.temperature_f ?? 'unknown'}${c.temperature_f != null ? '°F' : ''}</strong></div>
         <div class="pill"><small>Precipitation</small><br><strong>${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '%' : 'unknown'}</strong></div>
       </div>
+      ${scopeLadderHtml(v)}
+      ${bandHtml(c)}
+      ${checksHtml(e)}
       <h3>Why this scope?</h3>
       <p>${v.scope_reason_codes.map(x => `<code>${x}</code>`).join(' ')}</p>
       <h3>Why this verdict?</h3>
