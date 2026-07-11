@@ -32,6 +32,41 @@ const SCOPE_LABELS = {
   unsupported_specific_claim: 'Unsupported specific claim',
 };
 
+const SCOPE_LADDER = ['exact_location', 'microclimate_adjusted', 'nearby_observation_area', 'official_forecast_area'];
+
+function scopeLadderHtml(v) {
+  const special = v.claim_scope === 'official_alert_only' || v.claim_scope === 'unsupported_specific_claim';
+  const rows = SCOPE_LADDER.map(s => {
+    const granted = v.claim_scope === s;
+    const requested = v.requested_scope === s;
+    return `<div class="rung ${granted ? 'granted' : ''}${requested && !granted ? ' requested' : ''}">
+      <span class="rung-dot"></span><span class="rung-name">${label(s)}</span>
+      ${requested ? '<span class="rung-tag">requested</span>' : ''}
+      ${granted ? '<span class="rung-tag got">granted</span>' : ''}
+    </div>`;
+  }).join('');
+  const specialRow = special
+    ? `<div class="rung special granted"><span class="rung-dot"></span><span class="rung-name">${label(v.claim_scope)}</span><span class="rung-tag got">${v.claim_scope === 'official_alert_only' ? 'governs' : 'withheld'}</span></div>`
+    : '';
+  return `<div class="ladder"><small>Claim scope ladder — how specific the evidence lets us be</small>${rows}${specialRow}</div>`;
+}
+
+function checksHtml(e) {
+  const entries = Object.entries(e).filter(([, val]) => typeof val === 'boolean');
+  const passing = entries.filter(([, val]) => val).length;
+  const pills = entries.map(([k, val]) =>
+    `<span class="check ${val ? 'ok' : 'bad'}">${val ? '✓' : '✗'} ${esc(label(k))}</span>`).join('');
+  return `<details class="checks"><summary>Epistemology — ${passing}/${entries.length} checks passing</summary><div class="check-grid">${pills}</div></details>`;
+}
+
+function bandHtml(c) {
+  const b = c.uncertainty_interval;
+  if (!b) return '';
+  return `<div class="band"><small>Uncertainty band (public proxy)</small>
+    <div class="band-bar"><span>${esc(b.temperature_low_f)}°F</span><div class="band-track"><div class="band-fill"></div></div><span>${esc(b.temperature_high_f)}°F</span></div>
+    <small>±${esc(b.spread_f)}°F from observation distance, evidence staleness, and microclimate context</small></div>`;
+}
+
 function showError(message) {
   $('result').innerHTML = `
     <h2>Forecast Verdict</h2>
@@ -120,6 +155,58 @@ $('resolve').addEventListener('click', async () => {
     $('oracleResult').innerHTML = `<p>Could not reach the BoundaryCast API. ${esc(String(error))}</p>`;
   } finally {
     button.disabled = false;
+  }
+});
+
+// --- Judge tour: auto-runs the 4-beat demo ---
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function setStrongEvidence() {
+  $('surface').value = 'open'; $('shade').value = 'partial'; $('wind').value = 'moderate';
+  $('elevation').value = '16'; $('water').value = 'true'; $('urban').value = 'high';
+}
+
+function clearEvidence() {
+  $('surface').value = ''; $('shade').value = ''; $('wind').value = '';
+  $('elevation').value = ''; $('water').value = ''; $('urban').value = '';
+}
+
+$('tour').addEventListener('click', async () => {
+  const btn = $('tour');
+  const say = (t) => { $('tourStatus').textContent = t; };
+  btn.disabled = true;
+  try {
+    say('Beat 1 — strong evidence: exact-location forecast, PERMIT…');
+    $('scenario').value = 'normal';
+    $('requestedScope').value = 'exact_location';
+    setStrongEvidence();
+    $('run').click();
+    await fetch('/api/v1/markets/seed-demo', { method: 'POST' });
+    await sleep(3000);
+
+    say('Beat 2 — resolving a seeded market through the oracle…');
+    await loadMarkets();
+    const settleBtn = document.querySelector('[data-settle]');
+    if (settleBtn) { settleBtn.click(); await sleep(3000); }
+
+    say('Beat 3 — weak evidence + exact-location demanded: the oracle refuses…');
+    clearEvidence();
+    $('minScope').value = 'exact_location';
+    $('market').value = 'temp100';
+    $('resolve').click();
+    await sleep(3200);
+
+    say('Beat 4 — official alert governs: alert market resolves YES (official)…');
+    $('scenario').value = 'alert';
+    $('minScope').value = 'official_forecast_area';
+    $('market').value = 'alert';
+    $('resolve').click();
+    await sleep(3200);
+    $('scenario').value = 'normal';
+    say('Tour complete — every decision above is a hash-chained, replayable artifact. Scroll for details.');
+  } finally {
+    btn.disabled = false;
   }
 });
 
@@ -279,6 +366,9 @@ $('run').addEventListener('click', async () => {
         <div class="pill"><small>Temperature</small><br><strong>${c.temperature_f ?? 'unknown'}${c.temperature_f != null ? '°F' : ''}</strong></div>
         <div class="pill"><small>Precipitation</small><br><strong>${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '%' : 'unknown'}</strong></div>
       </div>
+      ${scopeLadderHtml(v)}
+      ${bandHtml(c)}
+      ${checksHtml(e)}
       <h3>Why this scope?</h3>
       <p>${v.scope_reason_codes.map(x => `<code>${x}</code>`).join(' ')}</p>
       <h3>Why this verdict?</h3>
