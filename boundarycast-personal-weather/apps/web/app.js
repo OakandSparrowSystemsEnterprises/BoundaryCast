@@ -182,9 +182,9 @@ $('geo').addEventListener('click', () => {
     activeLocationKind = 'live device location';
     showActiveLocation();
     const accuracy = Math.round(pos.coords.accuracy || 25);
-    $('tourStatus').textContent = accuracy <= 100
+    $('tourStatus').textContent = accuracy <= 250
       ? `Using your live location (accurate within ${accuracy} m) — never stored.`
-      : `Device location is only accurate within ${accuracy} m. Exact scope requires 100 m or better; enable precise location services and retry.`;
+      : `Device location is only accurate within ${accuracy} m. Exact scope requires 250 m or better; enable precise location services and retry.`;
     $('run').click();
   }, () => {
     $('tourStatus').textContent = 'Location permission denied — using demo coordinates.';
