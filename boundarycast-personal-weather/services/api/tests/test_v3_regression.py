@@ -78,6 +78,12 @@ def test_strong_exact_evidence(client):
         assert field in claim, f"claim missing {field}"
 
 
+def test_browser_location_at_102_meters_still_supports_exact_scope(client):
+    data = forecast(client, precision_meters=102, **FULL_MICROCLIMATE)
+    assert data["location_context"]["personal_location_language_allowed"] is True
+    assert data["verdict"]["claim_scope"] == "exact_location"
+
+
 def test_uncertainty_band_present_and_sane(client):
     data = forecast(client, **FULL_MICROCLIMATE)
     band = data["claim"]["uncertainty_interval"]
@@ -238,3 +244,4 @@ def test_ui_shows_claim_scope_and_fallback():
     assert "Why this scope?" in app_js
     assert "fell back to the highest supported scope" in app_js
     assert "Artifact Status" in app_js
+
