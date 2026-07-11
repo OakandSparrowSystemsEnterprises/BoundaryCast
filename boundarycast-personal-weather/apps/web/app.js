@@ -48,8 +48,13 @@ const MARKETS = {
   alert: { metric: 'alert_active', operator: 'gt', threshold: 0 },
 };
 
+function coordinatesValid() {
+  const lat = numberOrNull($('lat').value);
+  const lon = numberOrNull($('lon').value);
+  return lat !== null && lon !== null && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+}
+
 function currentEvidenceBody() {
-  const scenario = $('scenario').value;
   return {
     latitude: numberOrNull($('lat').value) ?? 37.7974,
     longitude: numberOrNull($('lon').value) ?? -121.2161,
@@ -61,13 +66,15 @@ function currentEvidenceBody() {
     nearby_water: boolOrNull($('water').value),
     urban_density: valueOrNull($('urban').value),
     demo_mode: true,
-    simulate_alert: scenario === 'alert',
-    simulate_no_official_forecast: scenario === 'no_forecast' || scenario === 'nothing',
-    simulate_no_observation: scenario === 'no_observation' || scenario === 'nothing'
+    ...scenarioOverrides()
   };
 }
 
 $('resolve').addEventListener('click', async () => {
+  if (!coordinatesValid()) {
+    $('oracleResult').innerHTML = '<p>Latitude must be between -90 and 90 and longitude between -180 and 180.</p>';
+    return;
+  }
   const marketKey = $('market').value;
   const body = {
     ...currentEvidenceBody(),
@@ -137,7 +144,7 @@ function marketCard(m) {
     <div class="market">
       <div class="market-q"><strong>${esc(m.question)}</strong></div>
       <div class="market-meta">
-        <span class="pill-inline">status: <strong>${m.status.replaceAll('_', ' ')}</strong></span>
+        <span class="pill-inline">status: <strong>${esc(label(m.status))}</strong></span>
         <span class="pill-inline">YES pool: ${m.pools.YES}</span>
         <span class="pill-inline">NO pool: ${m.pools.NO}</span>
         <span class="pill-inline">implied YES: ${yesPct}%</span>
@@ -159,12 +166,13 @@ function marketCard(m) {
 
 async function loadMarkets() {
   try {
-    const data = await (await fetch('/api/v1/markets')).json();
-    let replayLine = '';
-    try {
-      const replay = await (await fetch('/api/v1/replay')).json();
-      replayLine = `<p class="replay-line">Replay status: ${replay.ok ? `artifact chain verified (${replay.count} artifacts)` : `CHAIN FAILED — ${replay.error}`}</p>`;
-    } catch { /* replay line is best-effort */ }
+    const [data, replay] = await Promise.all([
+      fetch('/api/v1/markets').then(r => r.json()),
+      fetch('/api/v1/replay').then(r => r.json()).catch(() => null),
+    ]);
+    const replayLine = replay
+      ? `<p class="replay-line">Replay status: ${replay.ok ? `artifact chain verified (${replay.count} artifacts)` : `CHAIN FAILED — ${esc(replay.error)}`}</p>`
+      : '';
     $('marketBoard').innerHTML = replayLine + (data.markets.length
       ? data.markets.map(marketCard).join('')
       : '<p>No markets yet. Seed the demo markets.</p>');
@@ -182,22 +190,30 @@ $('refreshMarkets').addEventListener('click', loadMarkets);
 $('marketBoard').addEventListener('click', async (event) => {
   const btn = event.target.closest('button');
   if (!btn) return;
-  if (btn.dataset.stake) {
-    await fetch(`/api/v1/markets/${btn.dataset.market}/stake`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ side: btn.dataset.stake, amount: 10, trader: 'you' })
-    });
-    loadMarkets();
-  } else if (btn.dataset.settle) {
-    btn.disabled = true;
-    await fetch(`/api/v1/markets/${btn.dataset.settle}/settle`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(scenarioOverrides())
-    });
-    loadMarkets();
+  try {
+    if (btn.dataset.stake) {
+      await fetch(`/api/v1/markets/${btn.dataset.market}/stake`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ side: btn.dataset.stake, amount: 10, trader: 'you' })
+      });
+    } else if (btn.dataset.settle) {
+      btn.disabled = true;
+      await fetch(`/api/v1/markets/${btn.dataset.settle}/settle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scenarioOverrides())
+      });
+    } else {
+      return;
+    }
+  } catch (error) {
+    $('marketBoard').insertAdjacentHTML('afterbegin',
+      `<p>Market action failed. ${esc(String(error))}</p>`);
+  } finally {
+    btn.disabled = false;
   }
+  loadMarkets();
 });
 
 $('run').addEventListener('click', async () => {

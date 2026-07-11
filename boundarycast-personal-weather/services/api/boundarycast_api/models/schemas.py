@@ -10,14 +10,14 @@ RequestedScope = Literal[
 
 class PersonalForecastRequest(BaseModel):
     tenant_id: str = Field(default="boundarycast_demo_user", min_length=1, max_length=100)
-    latitude: float = Field(default=37.7974, ge=-90, le=90)
-    longitude: float = Field(default=-121.2161, ge=-180, le=180)
+    latitude: float = Field(default=37.7974, ge=-90, le=90, allow_inf_nan=False)
+    longitude: float = Field(default=-121.2161, ge=-180, le=180, allow_inf_nan=False)
     precision_meters: int = Field(default=25, ge=1, le=100000)
     forecast_hours: int = Field(default=12, ge=1, le=72)
     requested_scope: RequestedScope = "exact_location"
     surface_exposure: Optional[str] = Field(default=None, max_length=100)
     shade_exposure: Optional[str] = Field(default=None, max_length=100)
-    elevation_meters: Optional[float] = Field(default=None, ge=-500, le=10000)
+    elevation_meters: Optional[float] = Field(default=None, ge=-500, le=10000, allow_inf_nan=False)
     wind_exposure: Optional[str] = Field(default=None, max_length=100)
     nearby_water: Optional[bool] = None
     urban_density: Optional[Literal["low", "medium", "high"]] = None
@@ -38,7 +38,7 @@ class MarketResolutionRequest(PersonalForecastRequest):
                           min_length=1, max_length=500)
     metric: Literal["temperature_f", "wind_mph", "precip_probability", "alert_active"] = "temperature_f"
     operator: Literal["gt", "gte", "lt", "lte"] = "gt"
-    threshold: float = Field(default=0, ge=-1e9, le=1e9)
+    threshold: float = Field(default=0, ge=-1e9, le=1e9, allow_inf_nan=False)
     minimum_scope: RequestedScope = "official_forecast_area"
 
 
@@ -48,7 +48,7 @@ class MarketCreateRequest(MarketResolutionRequest):
 
 class StakeRequest(BaseModel):
     side: Literal["YES", "NO"]
-    amount: float = Field(gt=0, le=1_000_000)
+    amount: float = Field(gt=0, le=1_000_000, allow_inf_nan=False)
     trader: str = Field(default="anon", min_length=1, max_length=100)
 
 

@@ -17,7 +17,14 @@ PRIVACY_NOTES = (
     "stores a minimized location binding, never a raw real-world coordinate."
 )
 
+# Chain-head cache per ledger path: avoids re-reading the whole file on
+# every append. Only mutated under _LEDGER_LOCK.
+_LAST_HASH_CACHE = {}
+
 def _last_hash(path: Path):
+    key = str(path)
+    if key in _LAST_HASH_CACHE:
+        return _LAST_HASH_CACHE[key]
     if not path.exists():
         return None
     lines = [l for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
@@ -66,4 +73,5 @@ def _create_artifact_locked(path: Path, req, evidence, claim, policy_packs, verd
     artifact["artifact_hash"] = sha256_obj(artifact)
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(artifact, sort_keys=True) + "\n")
+    _LAST_HASH_CACHE[str(path)] = artifact["artifact_hash"]
     return artifact

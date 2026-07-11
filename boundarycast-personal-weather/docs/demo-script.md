@@ -14,7 +14,7 @@ Point at the resolution: NO (firm), the gatekeeper verdict, the claim scope, the
 
 ## Beat 2 — the oracle refuses to over-claim (45s)
 
-In Oracle Mode, set **minimum resolution scope: exact location**, clear the microclimate fields, resolve the temp market.
+In the **Forecast Future Weather** panel, set **minimum resolution scope: exact location**, clear the microclimate fields, resolve the temp market.
 
 **UNRESOLVED → arbitration** (`scope_below_market_minimum`).
 
@@ -22,7 +22,7 @@ In Oracle Mode, set **minimum resolution scope: exact location**, clear the micr
 
 ## Beat 3 — official alert supremacy (45s)
 
-Flip **Demo scenario → active official alert**. Resolve the alert market in Oracle Mode: **YES (official)**. Then settle a condition market on the board: **UNRESOLVED — official_alert_governs**, stakes refunded.
+Flip **Demo scenario → active official alert**. Resolve the alert market in the **Forecast Future Weather** panel: **YES (official)**. Then settle a condition market on the board: **UNRESOLVED — official_alert_governs**, stakes refunded.
 
 **Say:** "Official alerts govern. BoundaryCast never resolves a condition market from under an alert it must not soften."
 
