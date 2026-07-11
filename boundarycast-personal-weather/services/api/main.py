@@ -215,3 +215,9 @@ def seed_demo_markets():
     seeded = market_book.seed_demo(presets)
     return {"markets": market_book.list_markets(), "seeded": seeded}
 
+@app.post("/api/v1/markets/reset-demo")
+def reset_demo_markets():
+    """Clear stale stakes/resolutions and load a fresh call board."""
+    market_book.reset_book()
+    return seed_demo_markets()
+
