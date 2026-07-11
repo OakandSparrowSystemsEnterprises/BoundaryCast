@@ -33,22 +33,20 @@ function showError(message) {
   `;
 }
 
-$('run').addEventListener('click', async () => {
-  const lat = numberOrNull($('lat').value);
-  const lon = numberOrNull($('lon').value);
-  const precision = numberOrNull($('precision').value);
+const MARKETS = {
+  temp100: { metric: 'temperature_f', operator: 'gt', threshold: 100 },
+  temp80: { metric: 'temperature_f', operator: 'gt', threshold: 80 },
+  wind25: { metric: 'wind_mph', operator: 'gt', threshold: 25 },
+  rain50: { metric: 'precip_probability', operator: 'gt', threshold: 0.5 },
+  alert: { metric: 'alert_active', operator: 'gt', threshold: 0 },
+};
+
+function currentEvidenceBody() {
   const scenario = $('scenario').value;
-
-  if (lat === null || lon === null || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-    showError('Latitude must be between -90 and 90 and longitude between -180 and 180.');
-    return;
-  }
-
-  const body = {
-    latitude: lat,
-    longitude: lon,
-    precision_meters: precision ?? 25,
-    requested_scope: $('requestedScope').value,
+  return {
+    latitude: numberOrNull($('lat').value) ?? 37.7974,
+    longitude: numberOrNull($('lon').value) ?? -121.2161,
+    precision_meters: numberOrNull($('precision').value) ?? 25,
     surface_exposure: valueOrNull($('surface').value),
     shade_exposure: valueOrNull($('shade').value),
     wind_exposure: valueOrNull($('wind').value),
@@ -60,6 +58,67 @@ $('run').addEventListener('click', async () => {
     simulate_no_official_forecast: scenario === 'no_forecast' || scenario === 'nothing',
     simulate_no_observation: scenario === 'no_observation' || scenario === 'nothing'
   };
+}
+
+$('resolve').addEventListener('click', async () => {
+  const marketKey = $('market').value;
+  const body = {
+    ...currentEvidenceBody(),
+    ...MARKETS[marketKey],
+    market_id: `market_demo_${marketKey}`,
+    question: $('market').options[$('market').selectedIndex].text,
+    minimum_scope: $('minScope').value,
+  };
+  const button = $('resolve');
+  button.disabled = true;
+  $('oracleResult').innerHTML = '<p>Resolving against governed forecast claim...</p>';
+  try {
+    const res = await fetch('/api/v1/oracle/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const detail = await res.text();
+      $('oracleResult').innerHTML = `<p>The oracle rejected the request (HTTP ${res.status}). ${detail.slice(0, 300)}</p>`;
+      return;
+    }
+    const d = await res.json();
+    const basis = d.resolution_basis;
+    $('oracleResult').innerHTML = `
+      <div class="resolution resolution-${d.resolution}">${d.resolution}</div>
+      ${d.resolution_confidence ? `<p><strong>Confidence:</strong> ${d.resolution_confidence}</p>` : ''}
+      <p>${d.detail}</p>
+      ${d.escalation ? `<p class="fallback">Unresolved (<code>${d.unresolved_reason}</code>) — escalate to <strong>${d.escalation}</strong>. The oracle does not pretend.</p>` : ''}
+      <div class="grid">
+        <div class="pill"><small>Resolution basis scope</small><br><strong>${label(basis.claim_scope)}</strong></div>
+        <div class="pill"><small>Market minimum scope</small><br><strong>${label(basis.requested_minimum_scope)}</strong></div>
+        <div class="pill"><small>Gatekeeper verdict</small><br><strong>${label(basis.gatekeeper_verdict)}</strong></div>
+        <div class="pill"><small>Evidence score</small><br><strong>${basis.evidence_score}</strong></div>
+        <div class="pill"><small>Uncertainty</small><br><strong>${label(basis.uncertainty)}</strong></div>
+        <div class="pill"><small>Observed value</small><br><strong>${d.condition.observed_value ?? '—'}</strong></div>
+      </div>
+      <h3>Resolution record</h3>
+      <p>Artifact <code>${d.artifact.artifact_hash.slice(0, 18)}...</code> — replayable at <code>${d.replay_endpoint}</code><br>
+      <small>Every resolution is bound to a hash-chained, replayable decision artifact.</small></p>
+    `;
+  } catch (error) {
+    $('oracleResult').innerHTML = `<p>Could not reach the BoundaryCast API. ${String(error)}</p>`;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$('run').addEventListener('click', async () => {
+  const lat = numberOrNull($('lat').value);
+  const lon = numberOrNull($('lon').value);
+
+  if (lat === null || lon === null || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    showError('Latitude must be between -90 and 90 and longitude between -180 and 180.');
+    return;
+  }
+
+  const body = { ...currentEvidenceBody(), requested_scope: $('requestedScope').value };
 
   const button = $('run');
   button.disabled = true;

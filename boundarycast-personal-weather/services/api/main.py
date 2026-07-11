@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from boundarycast_api.models.schemas import PersonalForecastRequest
+from boundarycast_api.models.schemas import PersonalForecastRequest, MarketResolutionRequest
 from boundarycast_api.adapters.geolocation_adapter import build_location_context
 from boundarycast_api.adapters.microclimate_adapter import build_microclimate_context
 from boundarycast_api.adapters.nws_adapter import get_official_forecast_stub
@@ -18,6 +18,7 @@ from boundarycast_api.foresight_proxy.microclimate_adjuster import build_forecas
 from boundarycast_api.gatekeeper_lite.evaluator import evaluate_gatekeeper
 from boundarycast_api.artifacts.artifact import create_artifact
 from boundarycast_api.artifacts.replay import verify_artifact_chain
+from boundarycast_api.oracle.market_resolution import resolve_market
 
 ROOT = Path(__file__).resolve().parents[2]
 APP_DIR = ROOT / "apps" / "web"
@@ -35,8 +36,10 @@ def root():
 def health():
     return {"status": "healthy", "engine": "BoundaryCast Personal Weather v3.0"}
 
-@app.post("/api/v1/personal-forecast")
-def personal_forecast(req: PersonalForecastRequest):
+def evaluate_governed_forecast(req: PersonalForecastRequest):
+    """The full governed pipeline: evidence -> epistemology -> scope ->
+    policy -> gatekeeper -> artifact. Shared by the personal forecast and
+    the oracle recipe endpoints."""
     location_context = build_location_context(req)
     microclimate_context = build_microclimate_context(req, location_context)
     evidence = {
@@ -65,6 +68,17 @@ def personal_forecast(req: PersonalForecastRequest):
         "verdict": verdict,
         "artifact": artifact,
     }
+
+@app.post("/api/v1/personal-forecast")
+def personal_forecast(req: PersonalForecastRequest):
+    return evaluate_governed_forecast(req)
+
+@app.post("/api/v1/oracle/resolve")
+def oracle_resolve(req: MarketResolutionRequest):
+    """Oracle recipe: resolve a weather-dependent prediction market from a
+    governed, replayable forecast claim."""
+    forecast = evaluate_governed_forecast(req)
+    return resolve_market(req, forecast)
 
 @app.get("/api/v1/replay")
 def replay():

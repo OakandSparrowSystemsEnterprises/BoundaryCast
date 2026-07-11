@@ -52,6 +52,32 @@
       <h2>Forecast Verdict</h2>
       <p>Run the demo to generate a governed personal forecast.</p>
     </section>
+
+    <section class="card">
+      <h2>Oracle Mode</h2>
+      <p class="oracle-sub">Resolve a weather-dependent prediction market from a governed, replayable forecast claim. Uses the location, microclimate, and demo scenario set above.</p>
+      <div class="controls">
+        <label>Market question
+          <select id="market">
+            <option value="temp100">Will the temperature exceed 100°F at this job site today?</option>
+            <option value="temp80">Will the temperature exceed 80°F at this location today?</option>
+            <option value="wind25">Will wind exceed 25 mph at this delivery checkpoint?</option>
+            <option value="rain50">Will rain probability exceed 50% at this outdoor event?</option>
+            <option value="alert">Will an official weather alert be active for this location?</option>
+          </select>
+        </label>
+        <label>Minimum resolution scope
+          <select id="minScope">
+            <option value="official_forecast_area">official forecast area (loosest)</option>
+            <option value="nearby_observation_area">nearby observation area</option>
+            <option value="microclimate_adjusted">microclimate adjusted</option>
+            <option value="exact_location">exact location (strictest)</option>
+          </select>
+        </label>
+        <button id="resolve">Resolve market</button>
+      </div>
+      <div id="oracleResult"><p>Pick a market and resolve it against the governed forecast.</p></div>
+    </section>
   </main>
   <script src="app.js"></script>
 </body>
