@@ -13,12 +13,17 @@
       <h1>Your Weather</h1>
       <p class="sub">Your weather, checked before it speaks. BoundaryCast travels with you and gives the most specific forecast claim the evidence supports — from exact-location weather down to official-area guidance — without pretending and without storing your location history.</p>
       <div class="tour-row">
-        <button id="tour">▶ Judge tour — auto-run the demo</button>
+        <button id="geo">📍 Use my location</button>
+        <button id="run">↻ Refresh forecast</button>
+        <button id="tour" class="secondary">▶ Judge tour — auto-run the demo</button>
         <span id="tourStatus"></span>
       </div>
     </section>
 
-    <section class="card controls">
+    <details class="card advanced">
+      <summary>Adjust inputs — location, microclimate context, demo scenario (auto-populated)</summary>
+      <p class="oracle-sub">Everything below fills itself: your location comes from the browser, microclimate context is auto-derived demo data. Open this only to override it.</p>
+      <div class="controls">
       <label>Latitude <input id="lat" type="number" step="0.0001" min="-90" max="90" value="37.7974" /></label>
       <label>Longitude <input id="lon" type="number" step="0.0001" min="-180" max="180" value="-121.2161" /></label>
       <label>Precision meters <input id="precision" type="number" min="1" max="100000" value="25" /></label>
@@ -30,15 +35,15 @@
           <option value="official_forecast_area">official forecast area</option>
         </select>
       </label>
-      <label>Surface exposure <input id="surface" placeholder="asphalt, grass, roof" /></label>
-      <label>Shade exposure <input id="shade" placeholder="open sun, tree shade, building shade" /></label>
-      <label>Wind exposure <input id="wind" placeholder="sheltered, open, exposed" /></label>
-      <label>Elevation meters <input id="elevation" type="number" step="1" min="-500" max="10000" placeholder="unknown" /></label>
+      <label>Surface exposure <input id="surface" value="open" placeholder="asphalt, grass, roof" /></label>
+      <label>Shade exposure <input id="shade" value="partial" placeholder="open sun, tree shade, building shade" /></label>
+      <label>Wind exposure <input id="wind" value="moderate" placeholder="sheltered, open, exposed" /></label>
+      <label>Elevation meters <input id="elevation" type="number" step="1" min="-500" max="10000" value="16" placeholder="unknown" /></label>
       <label>Nearby water
-        <select id="water"><option value="">unknown</option><option value="true">yes</option><option value="false">no</option></select>
+        <select id="water"><option value="">unknown</option><option value="true" selected>yes</option><option value="false">no</option></select>
       </label>
       <label>Urban density
-        <select id="urban"><option value="">unknown</option><option>low</option><option>medium</option><option>high</option></select>
+        <select id="urban"><option value="">unknown</option><option>low</option><option>medium</option><option selected>high</option></select>
       </label>
       <label>Demo scenario
         <select id="scenario">
@@ -49,8 +54,8 @@
           <option value="nothing">no forecast + no observation</option>
         </select>
       </label>
-      <button id="run">Generate governed forecast</button>
-    </section>
+      </div>
+    </details>
 
     <section class="card" id="result">
       <h2>Forecast Verdict</h2>

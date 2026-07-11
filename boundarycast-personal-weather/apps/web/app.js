@@ -158,6 +158,25 @@ $('resolve').addEventListener('click', async () => {
   }
 });
 
+// --- Use my location: real coordinates from the browser, never stored ---
+
+$('geo').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    $('tourStatus').textContent = 'Geolocation unavailable in this browser — using demo coordinates.';
+    return;
+  }
+  $('tourStatus').textContent = 'Locating…';
+  navigator.geolocation.getCurrentPosition((pos) => {
+    $('lat').value = pos.coords.latitude.toFixed(4);
+    $('lon').value = pos.coords.longitude.toFixed(4);
+    $('precision').value = Math.max(1, Math.min(100000, Math.round(pos.coords.accuracy || 25)));
+    $('tourStatus').textContent = 'Using your live location — used for this request only, never stored.';
+    $('run').click();
+  }, () => {
+    $('tourStatus').textContent = 'Location permission denied — using demo coordinates.';
+  });
+});
+
 // --- Judge tour: auto-runs the 4-beat demo ---
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -348,34 +367,50 @@ $('run').addEventListener('click', async () => {
       replayStatus = replay.ok ? `chain verified (${replay.count} artifacts)` : `chain FAILED: ${replay.error}`;
     } catch { replayStatus = 'recorded (replay check unavailable)'; }
 
+    const b = c.uncertainty_interval;
+    const alertChip = v.claim_scope === 'official_alert_only'
+      ? '<span class="chip chip-alert">⚠ Official alert governs</span>'
+      : '<span class="chip chip-ok">No official alerts</span>';
+
     $('result').innerHTML = `
-      <h2>Forecast Verdict</h2>
-      <div class="verdict">${label(v.product_verdict)}</div>
+      <div class="instant">
+        <div class="instant-temp">${c.temperature_f ?? '—'}<span class="deg">°F</span></div>
+        <div class="instant-main">
+          <div class="instant-line">${esc(c.summary)}</div>
+          <div class="instant-sub">${b ? `${esc(b.temperature_low_f)}–${esc(b.temperature_high_f)}°F expected · ` : ''}${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '% rain chance · ' : ''}checked ${e.evidence_score != null ? Math.round(e.evidence_score * 100) : 0}% of evidence gates</div>
+          <div class="chip-row">${alertChip}<span class="chip">${SCOPE_LABELS[v.claim_scope] ?? esc(label(v.claim_scope))}</span><span class="chip">${label(v.product_verdict)}</span></div>
+        </div>
+      </div>
       <div class="scope-badge scope-${esc(v.claim_scope)}">Forecast Scope: ${SCOPE_LABELS[v.claim_scope] ?? esc(label(v.claim_scope))}</div>
       <p>${esc(c.public_message)}</p>
       ${fallbackNote}
-      <div class="grid">
-        <div class="pill"><small>Forecast scope</small><br><strong>${label(v.claim_scope)}</strong></div>
-        <div class="pill"><small>Requested scope</small><br><strong>${label(v.requested_scope)}</strong></div>
-        <div class="pill"><small>Location specificity</small><br><strong>${locationSpecificity}</strong></div>
-        <div class="pill"><small>Microclimate confidence</small><br><strong>${v.microclimate_confidence}</strong></div>
-        <div class="pill"><small>Evidence score</small><br><strong>${e.evidence_score}</strong></div>
-        <div class="pill"><small>Uncertainty</small><br><strong>${label(e.uncertainty)}</strong></div>
-        <div class="pill"><small>Official alert</small><br><strong>${alertCount}</strong></div>
-        <div class="pill"><small>Knowledge state</small><br><strong>${e.knowledge_state}</strong></div>
-        <div class="pill"><small>Temperature</small><br><strong>${c.temperature_f ?? 'unknown'}${c.temperature_f != null ? '°F' : ''}</strong></div>
-        <div class="pill"><small>Precipitation</small><br><strong>${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '%' : 'unknown'}</strong></div>
-      </div>
       ${scopeLadderHtml(v)}
-      ${bandHtml(c)}
-      ${checksHtml(e)}
-      <h3>Why this scope?</h3>
-      <p>${v.scope_reason_codes.map(x => `<code>${x}</code>`).join(' ')}</p>
-      <h3>Why this verdict?</h3>
-      <p>${v.reason_codes.length ? v.reason_codes.map(x => `<code>${x}</code>`).join(' ') : 'Evidence is sufficient for publication.'}</p>
-      <h3>Artifact Status</h3>
-      <p><code>${data.artifact.artifact_hash.slice(0, 18)}...</code> — ${replayStatus}<br>
-      <small>location binding: <code>${data.artifact.location_binding_type}</code> · zero-cache: no identity, no location history</small></p>
+      <details class="govdetail">
+        <summary>Full governance detail — verdict, evidence, uncertainty, artifact</summary>
+        <h2>Forecast Verdict</h2>
+        <div class="verdict">${label(v.product_verdict)}</div>
+        <div class="grid">
+          <div class="pill"><small>Forecast scope</small><br><strong>${label(v.claim_scope)}</strong></div>
+          <div class="pill"><small>Requested scope</small><br><strong>${label(v.requested_scope)}</strong></div>
+          <div class="pill"><small>Location specificity</small><br><strong>${locationSpecificity}</strong></div>
+          <div class="pill"><small>Microclimate confidence</small><br><strong>${v.microclimate_confidence}</strong></div>
+          <div class="pill"><small>Evidence score</small><br><strong>${e.evidence_score}</strong></div>
+          <div class="pill"><small>Uncertainty</small><br><strong>${label(e.uncertainty)}</strong></div>
+          <div class="pill"><small>Official alert</small><br><strong>${alertCount}</strong></div>
+          <div class="pill"><small>Knowledge state</small><br><strong>${e.knowledge_state}</strong></div>
+          <div class="pill"><small>Temperature</small><br><strong>${c.temperature_f ?? 'unknown'}${c.temperature_f != null ? '°F' : ''}</strong></div>
+          <div class="pill"><small>Precipitation</small><br><strong>${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '%' : 'unknown'}</strong></div>
+        </div>
+        ${bandHtml(c)}
+        ${checksHtml(e)}
+        <h3>Why this scope?</h3>
+        <p>${v.scope_reason_codes.map(x => `<code>${x}</code>`).join(' ')}</p>
+        <h3>Why this verdict?</h3>
+        <p>${v.reason_codes.length ? v.reason_codes.map(x => `<code>${x}</code>`).join(' ') : 'Evidence is sufficient for publication.'}</p>
+        <h3>Artifact Status</h3>
+        <p><code>${data.artifact.artifact_hash.slice(0, 18)}...</code> — ${replayStatus}<br>
+        <small>location binding: <code>${data.artifact.location_binding_type}</code> · zero-cache: no identity, no location history</small></p>
+      </details>
     `;
   } catch (error) {
     showError(`Could not reach the BoundaryCast API. ${String(error)}`);
@@ -383,3 +418,10 @@ $('run').addEventListener('click', async () => {
     button.disabled = false;
   }
 });
+
+// --- Auto-populate on load: the answer, not a form ---
+(async function init() {
+  try { await fetch('/api/v1/markets/seed-demo', { method: 'POST' }); } catch { /* board shows its own error */ }
+  loadMarkets();
+  $('run').click();
+})();
