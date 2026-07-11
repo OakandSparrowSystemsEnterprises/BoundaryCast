@@ -150,7 +150,7 @@ $('resolve').addEventListener('click', async () => {
       <div class="grid">
         <div class="pill"><small>Resolution basis scope</small><br><strong>${label(basis.claim_scope)}</strong></div>
         <div class="pill"><small>Market minimum scope</small><br><strong>${label(basis.requested_minimum_scope)}</strong></div>
-        <div class="pill"><small>Gatekeeper verdict</small><br><strong>${label(basis.gatekeeper_verdict)}</strong></div>
+        <div class="pill"><small>BoundaryCast verdict</small><br><strong>${label(basis.gatekeeper_verdict)}</strong></div>
         <div class="pill"><small>Evidence score</small><br><strong>${basis.evidence_score}</strong></div>
         <div class="pill"><small>Uncertainty</small><br><strong>${label(basis.uncertainty)}</strong></div>
         <div class="pill"><small>Observed value</small><br><strong>${d.condition.observed_value ?? '—'}</strong></div>
@@ -274,7 +274,7 @@ $('tour').addEventListener('click', async () => {
   }
 });
 
-// --- Market Board ---
+// --- Call the Weather ---
 
 function scenarioOverrides() {
   const scenario = $('scenario').value;
@@ -308,7 +308,7 @@ function marketCard(m) {
         </div>` : `
         <div class="market-resolution">
           <strong>${esc(res.resolution)}</strong>${res.resolution_confidence ? ` (${esc(res.resolution_confidence)})` : ''} — ${esc(res.detail)}<br>
-          <small>verdict: ${res.gatekeeper_verdict} · claim scope: ${label(res.claim_scope)} · artifact <code>${res.artifact_hash.slice(0, 14)}...</code></small><br>
+          <small>BoundaryCast verdict: ${res.gatekeeper_verdict} · claim scope: ${label(res.claim_scope)} · artifact <code>${res.artifact_hash.slice(0, 14)}...</code></small><br>
           <small>reason codes: ${[...(res.scope_reason_codes ?? []), ...(res.reason_codes ?? [])].map(x => `<code>${x}</code>`).join(' ') || '<code>none</code>'}</small>
           ${payoutRows ? `<br>${payoutRows}` : ''}
         </div>`}
@@ -327,10 +327,10 @@ async function loadMarkets() {
     const cf = data.crowd_feedback;
     const crowdLine = cf && cf.markets_scored
       ? `<p class="crowd-line">🏆 Crowd vs oracle: ${cf.crowd_correct}/${cf.markets_scored} calls right · Brier ${cf.crowd_brier_score} — your stakes are votes, recorded as a calibration signal the forecast can train on.</p>`
-      : '<p class="crowd-line">🏆 Stake YES/NO below — the crowd\'s calls get scored against the oracle and recorded as a training signal.</p>';
+      : '<p class="crowd-line">🏆 Call YES or NO below — the crowd\'s calls get scored against BoundaryCast and recorded as a training signal.</p>';
     $('marketBoard').innerHTML = replayLine + crowdLine + (data.markets.length
       ? data.markets.map(marketCard).join('')
-      : '<p>No markets yet. Seed the demo markets.</p>');
+      : '<p>No weather calls yet. Load the demonstration calls.</p>');
   } catch (error) {
     $('marketBoard').innerHTML = `<p>Could not load markets. ${esc(String(error))}</p>`;
   }
