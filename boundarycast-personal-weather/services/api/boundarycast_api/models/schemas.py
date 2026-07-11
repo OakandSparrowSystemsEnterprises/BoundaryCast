@@ -27,3 +27,15 @@ class PersonalForecastRequest(BaseModel):
     simulate_alert: bool = False
     simulate_no_official_forecast: bool = False
     simulate_no_observation: bool = False
+
+
+class MarketResolutionRequest(PersonalForecastRequest):
+    """A prediction-market resolution request: a market question bound to a
+    location, a measurable condition, and the minimum claim scope the market
+    creator accepts as a resolution basis."""
+    market_id: str = "market_demo_001"
+    question: str = "Will the condition hold at this location within the forecast window?"
+    metric: Literal["temperature_f", "wind_mph", "precip_probability", "alert_active"] = "temperature_f"
+    operator: Literal["gt", "gte", "lt", "lte"] = "gt"
+    threshold: float = 0
+    minimum_scope: RequestedScope = "official_forecast_area"
