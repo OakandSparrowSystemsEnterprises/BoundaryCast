@@ -1,0 +1,23 @@
+{
+  "policy_pack_id": "evidence-freshness-policy-v1",
+  "version": "1.0.0",
+  "domain": "weather",
+  "rules": [
+    {
+      "rule_id": "OFFICIAL_FORECAST_REQUIRED",
+      "deontic": "MUST",
+      "condition": "official_forecast_available == true",
+      "effect_if_missing": "ABSTAIN",
+      "reason_code": "missing_official_forecast",
+      "artifact_required": true
+    },
+    {
+      "rule_id": "OBSERVATION_STALENESS_CAUTION",
+      "deontic": "SHOULD",
+      "condition": "observation_freshness_minutes <= 90",
+      "effect_if_failed": "PERMIT_WITH_CAUTION",
+      "reason_code": "observation_stale_or_missing",
+      "artifact_required": true
+    }
+  ]
+}
