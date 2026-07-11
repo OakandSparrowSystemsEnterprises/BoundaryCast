@@ -27,7 +27,9 @@ def _public_message(claim_scope, summary, alerts):
         return f"{headline} {SCOPE_EXPLANATIONS['official_alert_only']}"
     if claim_scope == "unsupported_specific_claim":
         return SCOPE_EXPLANATIONS["unsupported_specific_claim"]
-    return f"{summary} {SCOPE_EXPLANATIONS[claim_scope]}"
+    active = alerts.get("alerts") or []
+    advisory = f" Active advisory: {active[0].get('headline')}" if active else ""
+    return f"{summary} {SCOPE_EXPLANATIONS[claim_scope]}{advisory}"
 
 
 def build_forecast_claim(req, evidence, epistemology, scope_decision):
@@ -53,6 +55,8 @@ def build_forecast_claim(req, evidence, epistemology, scope_decision):
         "temperature_f": official.get("temperature_f"),
         "wind_mph": official.get("wind_mph"),
         "precip_probability": official.get("precip_probability"),
+        "alert_active": 1 if alerts.get("active_alert_count", 0) > 0 else 0,
+        "alert_headline": (alerts.get("alerts") or [{}])[0].get("headline"),
         "microclimate_confidence": mcx.get("microclimate_confidence"),
         "microclimate_note": micro_note,
         "uncertainty_interval": uncertainty_band(evidence, epistemology),
@@ -61,3 +65,4 @@ def build_forecast_claim(req, evidence, epistemology, scope_decision):
         "evidence_score": epistemology.get("evidence_score"),
         "public_proxy": foresight(evidence),
     }
+

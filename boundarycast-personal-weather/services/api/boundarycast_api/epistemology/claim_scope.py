@@ -40,7 +40,10 @@ ADEQUATE_MICROCLIMATE_CONFIDENCE = ["medium", "high"]
 
 
 def official_alert_governs(evidence):
-    return evidence["alerts"].get("active_alert_count", 0) > 0
+    # Advisories remain visible but must not erase otherwise-valid current
+    # conditions. Only Severe/Extreme NWS alerts take protocol supremacy.
+    alerts = evidence["alerts"].get("alerts") or []
+    return any(a.get("severity") in {"Severe", "Extreme"} for a in alerts)
 
 
 def exact_location_supported(checks):
@@ -157,3 +160,4 @@ def determine_claim_scope(requested_scope, checks, evidence):
         "scope_reason_codes": [UNSUPPORTED_REASON_CODE],
         "fallback_applied": False,
     }
+

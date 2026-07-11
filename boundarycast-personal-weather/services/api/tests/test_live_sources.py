@@ -40,8 +40,10 @@ def test_live_parses_real_payload_shapes(client, monkeypatch):
     assert d["evidence_sources"]["alerts"] == "nws-alerts-live"
     assert d["claim"]["temperature_f"] == 91.4
     assert d["claim"]["precip_probability"] == 0.35
-    # One active NWS alert governs: PROTOCOL + official_alert_only.
-    assert d["verdict"]["claim_scope"] == "official_alert_only"
+    # A moderate advisory remains visible without erasing the forecast scope.
+    assert d["verdict"]["claim_scope"] != "official_alert_only"
+    assert d["claim"]["alert_active"] == 1
+    assert "Heat Advisory" in d["claim"]["alert_headline"]
 
 
 def test_live_failure_never_claims_stub_temperature_is_current(client, monkeypatch):
