@@ -1,8 +1,8 @@
 """Live public weather evidence: Open-Meteo forecasts + NWS alerts.
 
 No API keys, no accounts. Enabled when BOUNDARYCAST_LIVE_EVIDENCE=1 and
-the request is not in demo mode; every call is wrapped so any failure —
-offline, slow, non-US point for alerts, schema drift — falls back to the
+the request is not in demo mode; every call is wrapped so any failure â€”
+offline, slow, non-US point for alerts, schema drift â€” falls back to the
 deterministic demo stubs, with the source_name always disclosing which
 one you got. Coordinates are shared with these public providers for the
 live request only (see docs/privacy-zero-cache.md); responses are cached
@@ -13,6 +13,7 @@ import os
 import threading
 import time
 import urllib.request
+import urllib.parse
 from datetime import datetime, timezone
 
 LIVE_ENV = "BOUNDARYCAST_LIVE_EVIDENCE"
@@ -38,7 +39,26 @@ WMO_SUMMARIES = {
 
 
 def live_enabled():
-    return os.environ.get(LIVE_ENV) == "1"
+    # Personal weather is live by default. Operators can explicitly disable
+    # outbound evidence calls with BOUNDARYCAST_LIVE_EVIDENCE=0.
+    return os.environ.get(LIVE_ENV, "1") != "0"
+
+
+def search_locations(query, limit=5):
+    params = urllib.parse.urlencode({
+        "name": query, "count": limit, "language": "en", "format": "json",
+    })
+    data = _fetch_json(f"https://geocoding-api.open-meteo.com/v1/search?{params}")
+    results = []
+    for item in data.get("results") or []:
+        parts = [item.get("name"), item.get("admin1"), item.get("country")]
+        results.append({
+            "name": ", ".join(dict.fromkeys(p for p in parts if p)),
+            "latitude": item.get("latitude"),
+            "longitude": item.get("longitude"),
+            "timezone": item.get("timezone"),
+        })
+    return results
 
 
 def _fetch_json(url, headers=None):
@@ -92,7 +112,7 @@ def live_official_forecast(lat, lon):
 
 
 def live_observation(lat, lon):
-    # Open-Meteo's current block is model-interpolated at the exact point —
+    # Open-Meteo's current block is model-interpolated at the exact point â€”
     # disclosed in the source name, distance 0 by construction.
     data = _forecast_payload(lat, lon)
     current = data["current"]
@@ -129,3 +149,4 @@ def live_alerts(lat, lon):
         "active_alert_count": len(features),
         "alerts": alerts,
     }
+
