@@ -1,10 +1,17 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from boundarycast_api.models.schemas import PersonalForecastRequest, MarketResolutionRequest
+from boundarycast_api.models.schemas import (
+    PersonalForecastRequest,
+    MarketResolutionRequest,
+    MarketCreateRequest,
+    StakeRequest,
+    MarketSettleRequest,
+)
+from boundarycast_api.markets import market_book
 from boundarycast_api.adapters.geolocation_adapter import build_location_context
 from boundarycast_api.adapters.microclimate_adapter import build_microclimate_context
 from boundarycast_api.adapters.nws_adapter import get_official_forecast_stub
@@ -88,3 +95,64 @@ def oracle_resolve(req: MarketResolutionRequest):
 @app.get("/api/v1/replay")
 def replay():
     return verify_artifact_chain(ARTIFACT_PATH)
+
+# --- Market Factory Lite: a demo market book resolved by the oracle ---
+
+@app.post("/api/v1/markets")
+def create_market(req: MarketCreateRequest):
+    params = req.model_dump(exclude={"market_id"})
+    question = params.pop("question")
+    return market_book.create_market(question, params)
+
+@app.get("/api/v1/markets")
+def markets():
+    return {"markets": market_book.list_markets()}
+
+@app.post("/api/v1/markets/{market_id}/stake")
+def stake_market(market_id: str, req: StakeRequest):
+    position, error = market_book.stake(market_id, req.side, req.amount, req.trader)
+    if error:
+        raise HTTPException(status_code=404 if error == "unknown_market" else 409, detail=error)
+    return {"position": position, "market": market_book.get_market(market_id)}
+
+@app.post("/api/v1/markets/{market_id}/settle")
+def settle_market(market_id: str, req: MarketSettleRequest):
+    market = market_book.get_market(market_id)
+    if market is None:
+        raise HTTPException(status_code=404, detail="unknown_market")
+    if market["status"] != "open":
+        raise HTTPException(status_code=409, detail="market_not_open")
+    overrides = {k: v for k, v in req.model_dump().items() if v is not None}
+    oracle_req = MarketResolutionRequest(
+        **{**market["oracle_params"], **overrides},
+        market_id=market_id,
+        question=market["question"],
+    )
+    forecast = evaluate_governed_forecast(oracle_req)
+    resolution = resolve_market(oracle_req, forecast)
+    settled, error = market_book.settle(market_id, resolution)
+    if error:
+        raise HTTPException(status_code=409, detail=error)
+    return {"market": settled, "resolution": resolution}
+
+@app.post("/api/v1/markets/seed-demo")
+def seed_demo_markets():
+    """Seed the board with three preset markets and starter stakes so the
+    demo is never empty on stage."""
+    if market_book.list_markets():
+        return {"markets": market_book.list_markets(), "seeded": False}
+    presets = [
+        ("Will it rain at this outdoor event between 2 PM and 5 PM?",
+         dict(metric="precip_probability", operator="gt", threshold=0.5, minimum_scope="nearby_observation_area")),
+        ("Will wind exceed 25 mph on this delivery route today?",
+         dict(metric="wind_mph", operator="gt", threshold=25, minimum_scope="nearby_observation_area")),
+        ("Will the temperature exceed 100°F at this job site today?",
+         dict(metric="temperature_f", operator="gt", threshold=100, minimum_scope="nearby_observation_area")),
+    ]
+    for question, condition in presets:
+        base = MarketCreateRequest(**condition).model_dump(exclude={"market_id"})
+        base.pop("question")
+        market = market_book.create_market(question, base)
+        market_book.stake(market["market_id"], "YES", 60, trader="demo_yes")
+        market_book.stake(market["market_id"], "NO", 40, trader="demo_no")
+    return {"markets": market_book.list_markets(), "seeded": True}

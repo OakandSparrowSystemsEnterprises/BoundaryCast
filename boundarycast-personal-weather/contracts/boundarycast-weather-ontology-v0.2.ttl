@@ -1,0 +1,205 @@
+@prefix : <https://oakandsparrow.example/boundarycast/ontology#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://oakandsparrow.example/boundarycast/ontology>
+    a owl:Ontology ;
+    owl:versionInfo "boundarycast-weather-ontology-v0.2" ;
+    rdfs:comment "BoundaryCast public weather ontology: location and microclimate context, evidence, epistemology, claim scope, deontic policy, Gatekeeper-Lite verdicts, and replayable decision artifacts. Public-safe: contains no private OASSE math, QTP, Manifold equations, or claim-altitude math." .
+
+#################################################################
+# Classes: location and context
+#################################################################
+
+:UserLocation a owl:Class .
+:PersonLocationContext a owl:Class .
+:LocationPrecision a owl:Class .
+:ForecastWindow a owl:Class .
+:PersonalForecastContext a owl:Class ;
+    rdfs:comment "The live, zero-cache request context: one forecast evaluation for one place at one moment." .
+
+#################################################################
+# Classes: evidence
+#################################################################
+
+:EvidenceBundle a owl:Class .
+:OfficialForecast a owl:Class .
+:WeatherObservation a owl:Class .
+:WeatherAlert a owl:Class .
+:SourceProvenance a owl:Class .
+:ObservationDistance a owl:Class .
+:ForecastGridDistance a owl:Class .
+
+#################################################################
+# Classes: microclimate
+#################################################################
+
+:MicroclimateContext a owl:Class .
+:SurfaceExposure a owl:Class .
+:ShadeExposure a owl:Class .
+:ElevationProfile a owl:Class .
+:WindExposure a owl:Class .
+:UrbanHeatEffect a owl:Class .
+:WaterProximity a owl:Class .
+:MicroclimateAdjustment a owl:Class .
+:MicroclimateConfidence a owl:Class .
+
+#################################################################
+# Classes: epistemology
+#################################################################
+
+:EpistemicCheck a owl:Class ;
+    rdfs:comment "A named boolean over the evidence bundle. The check vector is deterministic: identical evidence yields identical knowledge." .
+:KnowledgeState a owl:Class ;
+    rdfs:comment "Derived from the check vector: sufficient, partial, or insufficient. May tighten a verdict; may never loosen one." .
+:ScopeSupportCheck a owl:Class ;
+    rdfs:subClassOf :EpistemicCheck ;
+    rdfs:comment "A predicate over the check vector that decides whether a claim scope is supported." .
+:UncertaintyInterval a owl:Class .
+
+#################################################################
+# Classes: claims and scope
+#################################################################
+
+:ForecastClaim a owl:Class .
+:ClaimScope a owl:Class ;
+    rdfs:comment "How specific the system may be: the forecast-specific graceful-degradation layer." .
+:ScopeDecision a owl:Class ;
+    rdfs:comment "Assigns the granted ClaimScope for a request; records fallback and reason codes." .
+:ScopeReasonCode a owl:Class .
+
+#################################################################
+# Classes: deontic policy and verdicts
+#################################################################
+
+:PolicyPack a owl:Class .
+:Rule a owl:Class ;
+    rdfs:comment "A governed rule: a condition, a deontic operator, an effect verdict, and a reason code." .
+:DeonticOperator a owl:Class ;
+    rdfs:comment "The normative force of a rule: MUST, MUST_NOT, SHOULD, or MAY." .
+:GatekeeperVerdict a owl:Class ;
+    rdfs:comment "Whether the system may speak. Strict severity precedence: BLOCK > PROTOCOL > ABSTAIN > PERMIT_WITH_CAUTION > PERMIT." .
+
+#################################################################
+# Classes: privacy and artifacts
+#################################################################
+
+:ZeroCachePolicy a owl:Class ;
+    rdfs:comment "No account, no identity, no location history. Location is used for the live request only." .
+:LocationMinimization a owl:Class .
+:LocationHash a owl:Class .
+:DecisionArtifact a owl:Class ;
+    rdfs:comment "Hash-chained, replayable record binding evidence root, claim root, policy pack versions, scope decision, and verdict." .
+:ReplayResult a owl:Class .
+
+#################################################################
+# Object properties
+#################################################################
+
+:hasMicroclimateContext a owl:ObjectProperty ; rdfs:domain :PersonLocationContext ; rdfs:range :MicroclimateContext .
+:includes a owl:ObjectProperty ; rdfs:domain :EvidenceBundle .
+:isSupportedBy a owl:ObjectProperty ; rdfs:domain :ForecastClaim ; rdfs:range :EvidenceBundle .
+:evaluatesCheck a owl:ObjectProperty ; rdfs:domain :EvidenceBundle ; rdfs:range :EpistemicCheck .
+:derivesKnowledgeState a owl:ObjectProperty ; rdfs:domain :EvidenceBundle ; rdfs:range :KnowledgeState .
+:requestsClaimScope a owl:ObjectProperty ; rdfs:domain :PersonalForecastContext ; rdfs:range :ClaimScope .
+:assignsClaimScope a owl:ObjectProperty ; rdfs:domain :ScopeDecision ; rdfs:range :ClaimScope .
+:citesReasonCode a owl:ObjectProperty ; rdfs:domain :ScopeDecision ; rdfs:range :ScopeReasonCode .
+:qualifies a owl:ObjectProperty ; rdfs:domain :ScopeDecision ; rdfs:range :ForecastClaim .
+:supportsScope a owl:ObjectProperty ; rdfs:domain :ScopeSupportCheck ; rdfs:range :ClaimScope .
+:hasRule a owl:ObjectProperty ; rdfs:domain :PolicyPack ; rdfs:range :Rule .
+:hasDeontic a owl:ObjectProperty ; rdfs:domain :Rule ; rdfs:range :DeonticOperator .
+:hasEffect a owl:ObjectProperty ; rdfs:domain :Rule ; rdfs:range :GatekeeperVerdict .
+:governs a owl:ObjectProperty ; rdfs:domain :GatekeeperVerdict ; rdfs:range :ForecastClaim .
+:records a owl:ObjectProperty ; rdfs:domain :DecisionArtifact .
+:constrains a owl:ObjectProperty ; rdfs:domain :ZeroCachePolicy .
+:producesLocationHash a owl:ObjectProperty ; rdfs:domain :LocationMinimization ; rdfs:range :LocationHash .
+:verifiedBy a owl:ObjectProperty ; rdfs:domain :DecisionArtifact ; rdfs:range :ReplayResult .
+
+#################################################################
+# Datatype properties
+#################################################################
+
+:severityRank a owl:DatatypeProperty ; rdfs:domain :GatekeeperVerdict ; rdfs:range xsd:integer ;
+    rdfs:comment "Higher rank is stricter. A stricter verdict is never loosened by knowledge state." .
+:specificityRank a owl:DatatypeProperty ; rdfs:domain :ClaimScope ; rdfs:range xsd:integer ;
+    rdfs:comment "Lower rank is more specific. Fallback is monotone: never more specific than requested." .
+:reasonCode a owl:DatatypeProperty ; rdfs:domain :Rule ; rdfs:range xsd:string .
+:formalCondition a owl:DatatypeProperty ; rdfs:domain :EpistemicCheck ; rdfs:range xsd:string .
+
+#################################################################
+# Individuals: deontic operators
+#################################################################
+
+:MUST a :DeonticOperator ; rdfs:comment "Obligation: failure produces the rule's effect verdict, which cannot be loosened." .
+:MUST_NOT a :DeonticOperator ; rdfs:comment "Prohibition: the condition may never hold in a published claim." .
+:SHOULD a :DeonticOperator ; rdfs:comment "Recommendation: failure tightens to PERMIT_WITH_CAUTION with a reason code." .
+:MAY a :DeonticOperator ; rdfs:comment "Permission: grants an allowance (e.g. a claim scope) when the condition holds; never forces publication." .
+
+#################################################################
+# Individuals: gatekeeper verdicts (severity precedence)
+#################################################################
+
+:PERMIT a :GatekeeperVerdict ; :severityRank 1 .
+:PERMIT_WITH_CAUTION a :GatekeeperVerdict ; :severityRank 2 .
+:ABSTAIN a :GatekeeperVerdict ; :severityRank 3 .
+:PROTOCOL a :GatekeeperVerdict ; :severityRank 4 .
+:BLOCK a :GatekeeperVerdict ; :severityRank 5 .
+
+#################################################################
+# Individuals: claim scopes (specificity order)
+#################################################################
+
+:exact_location a :ClaimScope ; :specificityRank 1 .
+:microclimate_adjusted a :ClaimScope ; :specificityRank 2 .
+:nearby_observation_area a :ClaimScope ; :specificityRank 3 .
+:official_forecast_area a :ClaimScope ; :specificityRank 4 .
+:official_alert_only a :ClaimScope ;
+    rdfs:comment "Not on the specificity ladder: an active official alert governs and is never overridden or softened." .
+:unsupported_specific_claim a :ClaimScope ;
+    rdfs:comment "No supported scope exists; the system does not publish the claim." .
+
+#################################################################
+# Individuals: epistemic checks (the check vector)
+#################################################################
+
+:SchemaValid a :EpistemicCheck ; :formalCondition "request passed schema validation" .
+:LocationKnown a :EpistemicCheck ; :formalCondition "latitude != null AND longitude != null" .
+:LocationPreciseEnough a :EpistemicCheck ; :formalCondition "precision_meters <= 100" .
+:OfficialForecastAvailable a :EpistemicCheck ; :formalCondition "official.available == true" .
+:ObservationAvailable a :EpistemicCheck ; :formalCondition "observation.available == true" .
+:EvidenceFresh a :EpistemicCheck ; :formalCondition "official.freshness_minutes <= 60 AND observation.freshness_minutes <= 90" .
+:SourceKnown a :EpistemicCheck ; :formalCondition "official, observation, and alert sources all carry source_name" .
+:ObservationDistanceAcceptable a :EpistemicCheck ; :formalCondition "observation.distance_km <= 10" .
+:ForecastGridDistanceKnown a :EpistemicCheck ; :formalCondition "official.grid_distance_km != null" .
+:OfficialAlertChecked a :EpistemicCheck ; :formalCondition "alerts.available == true" .
+:MicroclimateContextKnown a :EpistemicCheck ; :formalCondition "microclimate_confidence not in {null, unsupported}" .
+:MicroclimateConfidenceBounded a :EpistemicCheck ; :formalCondition "microclimate_confidence in {low, low-medium, medium, high}" .
+:UncertaintyBounded a :EpistemicCheck ; :formalCondition "OfficialForecastAvailable AND ObservationAvailable" .
+:ClaimInsideForecastWindow a :EpistemicCheck ; :formalCondition "forecast_hours <= 72" .
+:PolicyPackActive a :EpistemicCheck ; :formalCondition "at least one policy pack loaded" .
+:VerdictReplayable a :EpistemicCheck ; :formalCondition "artifact path writable and hash chain intact" .
+
+#################################################################
+# Individuals: knowledge states
+#################################################################
+
+:Sufficient a :KnowledgeState ; rdfs:comment "All hard-required checks hold, evidence fresh, uncertainty bounded. Recommends PERMIT." .
+:Partial a :KnowledgeState ; rdfs:comment "Official forecast available from a known source. Recommends PERMIT_WITH_CAUTION." .
+:Insufficient a :KnowledgeState ; rdfs:comment "No anchor evidence. Recommends ABSTAIN." .
+
+#################################################################
+# Individuals: scope support checks (v3)
+#################################################################
+
+:ExactLocationSupported a :ScopeSupportCheck ; :supportsScope :exact_location ;
+    :formalCondition "LocationPreciseEnough AND OfficialForecastAvailable AND ObservationAvailable AND EvidenceFresh AND microclimate_confidence in {medium, high} AND UncertaintyBounded" .
+:MicroclimateAdjustmentSupported a :ScopeSupportCheck ; :supportsScope :microclimate_adjusted ;
+    :formalCondition "OfficialForecastAvailable AND microclimate_confidence in {medium, high} AND UncertaintyBounded" .
+:NearbyObservationSupported a :ScopeSupportCheck ; :supportsScope :nearby_observation_area ;
+    :formalCondition "ObservationAvailable AND OfficialForecastAvailable" .
+:OfficialForecastSupported a :ScopeSupportCheck ; :supportsScope :official_forecast_area ;
+    :formalCondition "OfficialForecastAvailable" .
+:OfficialAlertGoverns a :ScopeSupportCheck ; :supportsScope :official_alert_only ;
+    :formalCondition "alerts.active_alert_count > 0" .

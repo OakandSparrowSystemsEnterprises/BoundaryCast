@@ -1,5 +1,4 @@
-from .risk_window import risk_window
-from .trend_detector import detect_trend
+from .provider import foresight
 
 SCOPE_EXPLANATIONS = {
     "exact_location": "Your location is precise, official forecast is fresh, nearby observation support is acceptable, microclimate context is sufficient, and uncertainty is bounded.",
@@ -58,8 +57,5 @@ def build_forecast_claim(req, evidence, epistemology, scope_decision):
         "knowledge_state": epistemology.get("knowledge_state"),
         "uncertainty_label": epistemology.get("uncertainty"),
         "evidence_score": epistemology.get("evidence_score"),
-        "public_proxy": {
-            "risk_window": risk_window(evidence),
-            "trend": detect_trend(evidence),
-        },
+        "public_proxy": foresight(evidence),
     }

@@ -39,3 +39,22 @@ class MarketResolutionRequest(PersonalForecastRequest):
     operator: Literal["gt", "gte", "lt", "lte"] = "gt"
     threshold: float = 0
     minimum_scope: RequestedScope = "official_forecast_area"
+
+
+class MarketCreateRequest(MarketResolutionRequest):
+    """Create a market on the demo book. market_id is assigned by the book."""
+
+
+class StakeRequest(BaseModel):
+    side: Literal["YES", "NO"]
+    amount: float = Field(gt=0)
+    trader: str = "anon"
+
+
+class MarketSettleRequest(BaseModel):
+    """Settle-time overrides for the demo evidence scenario, so a market
+    created earlier can be resolved under live conditions (or a simulated
+    alert) on stage."""
+    simulate_alert: Optional[bool] = None
+    simulate_no_official_forecast: Optional[bool] = None
+    simulate_no_observation: Optional[bool] = None
