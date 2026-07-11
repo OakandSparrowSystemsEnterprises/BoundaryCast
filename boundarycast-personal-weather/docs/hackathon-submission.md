@@ -1,8 +1,18 @@
-# Submission: BoundaryCast Weather Oracle Recipe
+# Submission: Market Factory Lite + BoundaryCast Oracle Recipe
 
-**One-liner:** BoundaryCast turns local weather into a governed, replayable oracle for prediction markets.
+**Stage line:** "Prediction markets fail when resolution is vague. BoundaryCast makes weather markets resolvable by turning a local weather claim into an evidence-bound, scope-aware, replayable oracle artifact."
+
+**Why it matters:** "Anyone can create a weather-dependent market, but not everyone can write safe resolution rules. Our oracle recipe packages the resolution logic: what evidence counts, when official alerts govern, when the claim is exact versus area-level, and when the oracle must abstain."
 
 **Idea fit:** #1 Permissionless Market Factory with Oracle Recipes (primary), #11 Local City Prediction Markets and #5 Startup Founder Hedge Markets (secondary — weather drives events, delivery, construction, agriculture, outdoor ops).
+
+## The complete demo loop
+
+1. A user creates a market: "Will it rain at this location between 2 PM and 5 PM?"
+2. The market defines its oracle recipe: BoundaryCast weather oracle — location, time window, claim scope rules, official alert supremacy, resolution semantics.
+3. Users stake play-money YES or NO (parimutuel pools).
+4. BoundaryCast resolves: evidence, claim scope, official alerts, uncertainty, policy.
+5. The market pays out: YES/NO outcome, artifact hash, reason codes, replay proof. UNRESOLVED refunds stakes and routes to arbitration.
 
 ## The problem
 

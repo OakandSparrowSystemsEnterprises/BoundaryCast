@@ -9,6 +9,8 @@ It does not try to out-Windy Windy. Instead, it improves on static weather pages
 - **Claim Scope** — a graceful-degradation layer (`exact_location`, `microclimate_adjusted`, `nearby_observation_area`, `official_forecast_area`, `official_alert_only`, `unsupported_specific_claim`). The verdict answers *may the system speak?*; the scope answers *how specific may it be?* See `docs/v3-claim-scope-and-zero-cache.md`.
 - **Zero-cache privacy** — no account, no identity, no location history; artifacts carry a minimized location binding, never raw real coordinates. See `docs/privacy-zero-cache.md`.
 - **Oracle Recipe** — the same governed claim resolves weather-dependent prediction markets: `POST /api/v1/oracle/resolve` maps a market question (metric, operator, threshold, minimum claim scope) onto YES / NO / UNRESOLVED with an embedded replayable resolution artifact. Official alerts supersede; insufficient evidence escalates to arbitration instead of pretending. See `docs/oracle-recipe.md`.
+- **Market Factory Lite** — a play-money parimutuel market board that settles exclusively through the oracle: create, stake, one-click "Resolve with BoundaryCast", payouts or arbitration refunds, artifact hash and replay status on every resolution. See `docs/demo-script.md`.
+- **Formal layer** — full OWL ontology (`contracts/boundarycast-weather-ontology-v0.2.ttl`), formal deontics (`docs/deontics.md`), and the complete epistemology specification (`docs/epistemology-scaffold.md`). A private foresight provider seam (`BOUNDARYCAST_FORESIGHT_PROVIDER`) lets production load proprietary math at runtime without it ever entering this repository.
 
 ## Public boundary
 
@@ -38,8 +40,14 @@ Then open http://localhost:8787/ui
 
 - `GET /health`
 - `POST /api/v1/personal-forecast`
+- `GET /api/v1/oracle/recipe`
 - `POST /api/v1/oracle/resolve`
+- `POST /api/v1/markets` · `GET /api/v1/markets` · `POST /api/v1/markets/{id}/stake` · `POST /api/v1/markets/{id}/settle` · `POST /api/v1/markets/seed-demo`
 - `GET /api/v1/replay`
+
+## License
+
+Proprietary source-available — Copyright (c) 2026 Oak & Sparrow Systems Enterprise LLC, all rights reserved; evaluation, demonstration, and hackathon judging permitted. See `LICENSE`. An open-source release is planned.
 
 ## Tests
 

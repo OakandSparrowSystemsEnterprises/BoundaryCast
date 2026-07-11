@@ -109,6 +109,90 @@ $('resolve').addEventListener('click', async () => {
   }
 });
 
+// --- Market Board ---
+
+function scenarioOverrides() {
+  const scenario = $('scenario').value;
+  return {
+    simulate_alert: scenario === 'alert',
+    simulate_no_official_forecast: scenario === 'no_forecast' || scenario === 'nothing',
+    simulate_no_observation: scenario === 'no_observation' || scenario === 'nothing'
+  };
+}
+
+function marketCard(m) {
+  const res = m.resolution;
+  const total = m.pools.YES + m.pools.NO;
+  const yesPct = total > 0 ? Math.round((m.pools.YES / total) * 100) : 50;
+  const payoutRows = (m.payouts ?? []).map(p =>
+    `<small>${p.trader} (${p.kind}): ${p.payout}</small>`).join('<br>');
+  return `
+    <div class="market">
+      <div class="market-q"><strong>${m.question}</strong></div>
+      <div class="market-meta">
+        <span class="pill-inline">status: <strong>${m.status.replaceAll('_', ' ')}</strong></span>
+        <span class="pill-inline">YES pool: ${m.pools.YES}</span>
+        <span class="pill-inline">NO pool: ${m.pools.NO}</span>
+        <span class="pill-inline">implied YES: ${yesPct}%</span>
+      </div>
+      ${m.status === 'open' ? `
+        <div class="market-actions">
+          <button data-stake="YES" data-market="${m.market_id}">Stake 10 on YES</button>
+          <button data-stake="NO" data-market="${m.market_id}">Stake 10 on NO</button>
+          <button data-settle="${m.market_id}" class="settle">Resolve with BoundaryCast</button>
+        </div>` : `
+        <div class="market-resolution">
+          <strong>${res.resolution}</strong>${res.resolution_confidence ? ` (${res.resolution_confidence})` : ''} — ${res.detail}<br>
+          <small>verdict: ${res.gatekeeper_verdict} · claim scope: ${label(res.claim_scope)} · artifact <code>${res.artifact_hash.slice(0, 14)}...</code></small><br>
+          <small>reason codes: ${[...(res.scope_reason_codes ?? []), ...(res.reason_codes ?? [])].map(x => `<code>${x}</code>`).join(' ') || '<code>none</code>'}</small>
+          ${payoutRows ? `<br>${payoutRows}` : ''}
+        </div>`}
+    </div>`;
+}
+
+async function loadMarkets() {
+  try {
+    const data = await (await fetch('/api/v1/markets')).json();
+    let replayLine = '';
+    try {
+      const replay = await (await fetch('/api/v1/replay')).json();
+      replayLine = `<p class="replay-line">Replay status: ${replay.ok ? `artifact chain verified (${replay.count} artifacts)` : `CHAIN FAILED — ${replay.error}`}</p>`;
+    } catch { /* replay line is best-effort */ }
+    $('marketBoard').innerHTML = replayLine + (data.markets.length
+      ? data.markets.map(marketCard).join('')
+      : '<p>No markets yet. Seed the demo markets.</p>');
+  } catch (error) {
+    $('marketBoard').innerHTML = `<p>Could not load markets. ${String(error)}</p>`;
+  }
+}
+
+$('seedMarkets').addEventListener('click', async () => {
+  await fetch('/api/v1/markets/seed-demo', { method: 'POST' });
+  loadMarkets();
+});
+$('refreshMarkets').addEventListener('click', loadMarkets);
+
+$('marketBoard').addEventListener('click', async (event) => {
+  const btn = event.target.closest('button');
+  if (!btn) return;
+  if (btn.dataset.stake) {
+    await fetch(`/api/v1/markets/${btn.dataset.market}/stake`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ side: btn.dataset.stake, amount: 10, trader: 'you' })
+    });
+    loadMarkets();
+  } else if (btn.dataset.settle) {
+    btn.disabled = true;
+    await fetch(`/api/v1/markets/${btn.dataset.settle}/settle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(scenarioOverrides())
+    });
+    loadMarkets();
+  }
+});
+
 $('run').addEventListener('click', async () => {
   const lat = numberOrNull($('lat').value);
   const lon = numberOrNull($('lon').value);

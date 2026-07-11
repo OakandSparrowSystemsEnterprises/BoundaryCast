@@ -9,8 +9,10 @@ BOUNDARYCAST_WEATHER_ONTOLOGY_V02 = {
         "MicroclimateConfidence", "ForecastClaim", "UncertaintyInterval", "PolicyPack",
         "Rule", "GatekeeperVerdict", "DecisionArtifact", "ReplayResult",
         "ClaimScope", "ScopeDecision", "ScopeReasonCode", "PersonalForecastContext",
-        "LocationMinimization", "LocationHash", "ZeroCachePolicy"
+        "LocationMinimization", "LocationHash", "ZeroCachePolicy",
+        "EpistemicCheck", "KnowledgeState", "ScopeSupportCheck", "DeonticOperator"
     ],
+    "owl_document": "contracts/boundarycast-weather-ontology-v0.2.ttl",
     "relationships": [
         "PersonLocationContext has MicroclimateContext",
         "EvidenceBundle includes OfficialForecast",
@@ -27,6 +29,12 @@ BOUNDARYCAST_WEATHER_ONTOLOGY_V02 = {
         "ZeroCachePolicy constrains DecisionArtifact",
         "LocationMinimization produces LocationHash",
         "DecisionArtifact records LocationMinimization",
-        "DecisionArtifact records ScopeDecision"
+        "DecisionArtifact records ScopeDecision",
+        "EvidenceBundle evaluates EpistemicCheck",
+        "EvidenceBundle derives KnowledgeState",
+        "ScopeSupportCheck supports ClaimScope",
+        "PolicyPack has Rule",
+        "Rule has DeonticOperator",
+        "Rule has GatekeeperVerdict effect"
     ]
 }
