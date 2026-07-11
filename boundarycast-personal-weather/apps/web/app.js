@@ -225,7 +225,21 @@ $('destinationForm').addEventListener('submit', async (event) => {
   }
 });
 
-// --- Call the Weather ---
+// --- Call the Weather — terms acceptance gate ---
+
+let _termsAccepted = false;
+
+$('termsAccepted').addEventListener('change', () => {
+  _termsAccepted = $('termsAccepted').checked;
+  if (_termsAccepted) $('termsError').hidden = true;
+});
+
+function requireTerms() {
+  if (_termsAccepted) return true;
+  $('termsError').hidden = false;
+  $('termsError').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  return false;
+}
 
 function scenarioOverrides() {
   const scenario = $('scenario').value;
@@ -296,6 +310,7 @@ $('refreshMarkets').addEventListener('click', loadMarkets);
 $('marketBoard').addEventListener('click', async (event) => {
   const btn = event.target.closest('button');
   if (!btn) return;
+  if ((btn.dataset.stake || btn.dataset.settle) && !requireTerms()) return;
   try {
     if (btn.dataset.stake) {
       await fetch(`/api/v1/markets/${btn.dataset.market}/stake`, {

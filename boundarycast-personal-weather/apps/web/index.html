@@ -103,12 +103,30 @@
 
     <section class="card">
       <h2>Call the Weather</h2>
-      <p class="oracle-sub">Choose YES or NO on a weather call, then let BoundaryCast settle it against live, replayable evidence. These are play-money demonstrations.</p>
+
+      <div class="gambling-warning" id="gamblingWarning" role="alert">
+        ⚠️ <strong>Responsible participation notice:</strong> "Call the Weather" is a speculative crowd-challenge feature using demonstration credits only — no real money is involved or held. Participation should be responsible; only stake small, discretionary amounts you are comfortable losing. This is <em>not</em> a licensed gambling product.
+      </div>
+
+      <p class="oracle-sub">Challenge the forecast. Pick YES or NO on a weather call, then let BoundaryCast settle it against live, replayable evidence. Calls use play credits only — pocket-change stakes, no real-money custody or payout.</p>
+
+      <p class="privacy-notice" id="privacyNotice">
+        🔒 <strong>Privacy:</strong> BoundaryCast does not store your precise location. Your coordinates are used for the live forecast request only and are never saved, logged, or shared beyond that single request.
+      </p>
+
+      <div class="terms-row" id="termsRow">
+        <label class="terms-label">
+          <input type="checkbox" id="termsAccepted" />
+          I have read and accept the <a href="/ui/msa.html" target="_blank" rel="noopener noreferrer">Master Service Agreement</a> and <a href="/ui/eula.html" target="_blank" rel="noopener noreferrer">End User License Agreement</a>, and I understand this feature uses demonstration credits only — not real money.
+        </label>
+        <span id="termsError" class="terms-error" role="alert" hidden>You must accept the terms before placing or joining a call.</span>
+      </div>
+
       <div class="board-actions">
         <button id="seedMarkets">Load weather calls</button>
         <button id="refreshMarkets" class="secondary">Refresh calls</button>
       </div>
-      <div id="marketBoard"><p>Seed the demo markets to populate the board.</p></div>
+      <div id="marketBoard"><p>Load the demonstration calls to populate the board.</p></div>
     </section>
   </main>
   <script src="app.js"></script>
