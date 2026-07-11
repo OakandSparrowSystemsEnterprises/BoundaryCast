@@ -54,23 +54,23 @@ function scopeLadderHtml(v) {
   const specialRow = special
     ? `<div class="rung special granted"><span class="rung-dot"></span><span class="rung-name">${label(v.claim_scope)}</span><span class="rung-tag got">${v.claim_scope === 'official_alert_only' ? 'governs' : 'withheld'}</span></div>`
     : '';
-  return `<div class="ladder"><small>Claim scope ladder â€” how specific the evidence lets us be</small>${rows}${specialRow}</div>`;
+  return `<div class="ladder"><small>Claim scope ladder — how specific the evidence lets us be</small>${rows}${specialRow}</div>`;
 }
 
 function checksHtml(e) {
   const entries = Object.entries(e).filter(([, val]) => typeof val === 'boolean');
   const passing = entries.filter(([, val]) => val).length;
   const pills = entries.map(([k, val]) =>
-    `<span class="check ${val ? 'ok' : 'bad'}">${val ? 'âœ“' : 'âœ—'} ${esc(label(k))}</span>`).join('');
-  return `<details class="checks"><summary>Epistemology â€” ${passing}/${entries.length} checks passing</summary><div class="check-grid">${pills}</div></details>`;
+    `<span class="check ${val ? 'ok' : 'bad'}">${val ? '✓' : '✗'} ${esc(label(k))}</span>`).join('');
+  return `<details class="checks"><summary>Epistemology — ${passing}/${entries.length} checks passing</summary><div class="check-grid">${pills}</div></details>`;
 }
 
 function bandHtml(c) {
   const b = c.uncertainty_interval;
   if (!b) return '';
   return `<div class="band"><small>Uncertainty band (public proxy)</small>
-    <div class="band-bar"><span>${esc(b.temperature_low_f)}Â°F</span><div class="band-track"><div class="band-fill"></div></div><span>${esc(b.temperature_high_f)}Â°F</span></div>
-    <small>Â±${esc(b.spread_f)}Â°F from observation distance, evidence staleness, and microclimate context</small></div>`;
+    <div class="band-bar"><span>${esc(b.temperature_low_f)}°F</span><div class="band-track"><div class="band-fill"></div></div><span>${esc(b.temperature_high_f)}°F</span></div>
+    <small>±${esc(b.spread_f)}°F from observation distance, evidence staleness, and microclimate context</small></div>`;
 }
 
 function showError(message) {
@@ -146,17 +146,17 @@ $('resolve').addEventListener('click', async () => {
       <div class="resolution resolution-${esc(d.resolution)}">${esc(d.resolution)}</div>
       ${d.resolution_confidence ? `<p><strong>Confidence:</strong> ${esc(d.resolution_confidence)}</p>` : ''}
       <p>${esc(d.detail)}</p>
-      ${d.escalation ? `<p class="fallback">Unresolved (<code>${esc(d.unresolved_reason)}</code>) â€” escalate to <strong>${esc(d.escalation)}</strong>. The oracle does not pretend.</p>` : ''}
+      ${d.escalation ? `<p class="fallback">Unresolved (<code>${esc(d.unresolved_reason)}</code>) — escalate to <strong>${esc(d.escalation)}</strong>. The oracle does not pretend.</p>` : ''}
       <div class="grid">
         <div class="pill"><small>Resolution basis scope</small><br><strong>${label(basis.claim_scope)}</strong></div>
         <div class="pill"><small>Market minimum scope</small><br><strong>${label(basis.requested_minimum_scope)}</strong></div>
         <div class="pill"><small>Gatekeeper verdict</small><br><strong>${label(basis.gatekeeper_verdict)}</strong></div>
         <div class="pill"><small>Evidence score</small><br><strong>${basis.evidence_score}</strong></div>
         <div class="pill"><small>Uncertainty</small><br><strong>${label(basis.uncertainty)}</strong></div>
-        <div class="pill"><small>Observed value</small><br><strong>${d.condition.observed_value ?? 'â€”'}</strong></div>
+        <div class="pill"><small>Observed value</small><br><strong>${d.condition.observed_value ?? '—'}</strong></div>
       </div>
       <h3>Resolution record</h3>
-      <p>Artifact <code>${d.artifact.artifact_hash.slice(0, 18)}...</code> â€” replayable at <code>${d.replay_endpoint}</code><br>
+      <p>Artifact <code>${d.artifact.artifact_hash.slice(0, 18)}...</code> — replayable at <code>${d.replay_endpoint}</code><br>
       <small>Every resolution is bound to a hash-chained, replayable decision artifact.</small></p>
     `;
   } catch (error) {
@@ -170,10 +170,10 @@ $('resolve').addEventListener('click', async () => {
 
 $('geo').addEventListener('click', () => {
   if (!navigator.geolocation) {
-    $('tourStatus').textContent = 'Geolocation unavailable in this browser â€” using demo coordinates.';
+    $('tourStatus').textContent = 'Geolocation unavailable in this browser — using demo coordinates.';
     return;
   }
-  $('tourStatus').textContent = 'Locatingâ€¦';
+  $('tourStatus').textContent = 'Locating…';
   navigator.geolocation.getCurrentPosition((pos) => {
     $('lat').value = pos.coords.latitude.toFixed(4);
     $('lon').value = pos.coords.longitude.toFixed(4);
@@ -181,10 +181,10 @@ $('geo').addEventListener('click', () => {
     activeLocationName = `Current location (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`;
     activeLocationKind = 'live device location';
     showActiveLocation();
-    $('tourStatus').textContent = 'Using your live location â€” used for this request only, never stored.';
+    $('tourStatus').textContent = 'Using your live location — used for this request only, never stored.';
     $('run').click();
   }, () => {
-    $('tourStatus').textContent = 'Location permission denied â€” using demo coordinates.';
+    $('tourStatus').textContent = 'Location permission denied — using demo coordinates.';
   });
 });
 
@@ -241,7 +241,7 @@ $('tour').addEventListener('click', async () => {
   const say = (t) => { $('tourStatus').textContent = t; };
   btn.disabled = true;
   try {
-    say('Beat 1 â€” strong evidence: exact-location forecast, PERMITâ€¦');
+    say('Beat 1 — strong evidence: exact-location forecast, PERMIT…');
     $('scenario').value = 'normal';
     $('requestedScope').value = 'exact_location';
     setStrongEvidence();
@@ -249,26 +249,26 @@ $('tour').addEventListener('click', async () => {
     await fetch('/api/v1/markets/seed-demo', { method: 'POST' });
     await sleep(3000);
 
-    say('Beat 2 â€” resolving a seeded market through the oracleâ€¦');
+    say('Beat 2 — resolving a seeded market through the oracle…');
     await loadMarkets();
     const settleBtn = document.querySelector('[data-settle]');
     if (settleBtn) { settleBtn.click(); await sleep(3000); }
 
-    say('Beat 3 â€” weak evidence + exact-location demanded: the oracle refusesâ€¦');
+    say('Beat 3 — weak evidence + exact-location demanded: the oracle refuses…');
     clearEvidence();
     $('minScope').value = 'exact_location';
     $('market').value = 'temp100';
     $('resolve').click();
     await sleep(3200);
 
-    say('Beat 4 â€” official alert governs: alert market resolves YES (official)â€¦');
+    say('Beat 4 — official alert governs: alert market resolves YES (official)…');
     $('scenario').value = 'alert';
     $('minScope').value = 'official_forecast_area';
     $('market').value = 'alert';
     $('resolve').click();
     await sleep(3200);
     $('scenario').value = 'normal';
-    say('Tour complete â€” every decision above is a hash-chained, replayable artifact. Scroll for details.');
+    say('Tour complete — every decision above is a hash-chained, replayable artifact. Scroll for details.');
   } finally {
     btn.disabled = false;
   }
@@ -307,8 +307,8 @@ function marketCard(m) {
           <button data-settle="${m.market_id}" class="settle">Resolve with BoundaryCast</button>
         </div>` : `
         <div class="market-resolution">
-          <strong>${esc(res.resolution)}</strong>${res.resolution_confidence ? ` (${esc(res.resolution_confidence)})` : ''} â€” ${esc(res.detail)}<br>
-          <small>verdict: ${res.gatekeeper_verdict} Â· claim scope: ${label(res.claim_scope)} Â· artifact <code>${res.artifact_hash.slice(0, 14)}...</code></small><br>
+          <strong>${esc(res.resolution)}</strong>${res.resolution_confidence ? ` (${esc(res.resolution_confidence)})` : ''} — ${esc(res.detail)}<br>
+          <small>verdict: ${res.gatekeeper_verdict} · claim scope: ${label(res.claim_scope)} · artifact <code>${res.artifact_hash.slice(0, 14)}...</code></small><br>
           <small>reason codes: ${[...(res.scope_reason_codes ?? []), ...(res.reason_codes ?? [])].map(x => `<code>${x}</code>`).join(' ') || '<code>none</code>'}</small>
           ${payoutRows ? `<br>${payoutRows}` : ''}
         </div>`}
@@ -322,12 +322,12 @@ async function loadMarkets() {
       fetch('/api/v1/replay').then(r => r.json()).catch(() => null),
     ]);
     const replayLine = replay
-      ? `<p class="replay-line">Replay status: ${replay.ok ? `artifact chain verified (${replay.count} artifacts)` : `CHAIN FAILED â€” ${esc(replay.error)}`}</p>`
+      ? `<p class="replay-line">Replay status: ${replay.ok ? `artifact chain verified (${replay.count} artifacts)` : `CHAIN FAILED — ${esc(replay.error)}`}</p>`
       : '';
     const cf = data.crowd_feedback;
     const crowdLine = cf && cf.markets_scored
-      ? `<p class="crowd-line">ðŸ† Crowd vs oracle: ${cf.crowd_correct}/${cf.markets_scored} calls right Â· Brier ${cf.crowd_brier_score} â€” your stakes are votes, recorded as a calibration signal the forecast can train on.</p>`
-      : '<p class="crowd-line">ðŸ† Stake YES/NO below â€” the crowd\'s calls get scored against the oracle and recorded as a training signal.</p>';
+      ? `<p class="crowd-line">🏆 Crowd vs oracle: ${cf.crowd_correct}/${cf.markets_scored} calls right · Brier ${cf.crowd_brier_score} — your stakes are votes, recorded as a calibration signal the forecast can train on.</p>`
+      : '<p class="crowd-line">🏆 Stake YES/NO below — the crowd\'s calls get scored against the oracle and recorded as a training signal.</p>';
     $('marketBoard').innerHTML = replayLine + crowdLine + (data.markets.length
       ? data.markets.map(marketCard).join('')
       : '<p>No markets yet. Seed the demo markets.</p>');
@@ -404,7 +404,7 @@ $('run').addEventListener('click', async () => {
     const c = data.claim;
     const e = data.epistemology;
     const loc = data.location_context;
-    const alertCount = v.claim_scope === 'official_alert_only' ? 'ACTIVE â€” alert governs' : 'none active';
+    const alertCount = v.claim_scope === 'official_alert_only' ? 'ACTIVE — alert governs' : 'none active';
     const locationSpecificity = `${loc.precision_meters} m ${loc.personal_location_language_allowed ? '(personal-location language allowed)' : '(too coarse for personal-location language)'}`;
     const fallbackNote = v.fallback_applied
       ? `<p class="fallback">Requested scope <code>${label(v.requested_scope)}</code> was not supported by the evidence, so BoundaryCast fell back to the highest supported scope instead of refusing to answer.</p>`
@@ -418,19 +418,19 @@ $('run').addEventListener('click', async () => {
 
     const b = c.uncertainty_interval;
     const alertChip = v.claim_scope === 'official_alert_only'
-      ? '<span class="chip chip-alert">âš  Official alert governs</span>'
+      ? '<span class="chip chip-alert">⚠ Official alert governs</span>'
       : '<span class="chip chip-ok">No official alerts</span>';
     const live = Object.values(data.evidence_sources ?? {}).some(s => String(s).includes('live'));
     const unavailable = Object.values(data.evidence_sources ?? {}).some(s => String(s).includes('unavailable'));
-    const sourceChip = `<span class="chip">${live ? 'ðŸŒ live public data' : unavailable ? 'live data unavailable' : 'demo data'}</span>`;
+    const sourceChip = `<span class="chip">${live ? '🌐 live public data' : unavailable ? 'live data unavailable' : 'demo data'}</span>`;
 
     $('result').innerHTML = `
       <div class="instant">
-        <div class="instant-temp">${c.temperature_f ?? 'â€”'}<span class="deg">Â°F</span></div>
+        <div class="instant-temp">${c.temperature_f ?? '—'}<span class="deg">°F</span></div>
         <div class="instant-main">
           <div class="instant-line">${esc(c.summary)}</div>
-          <div class="forecast-place">${esc(activeLocationName)} Â· ${esc(activeLocationKind)}</div>
-          <div class="instant-sub">${b ? `${esc(b.temperature_low_f)}â€“${esc(b.temperature_high_f)}Â°F expected Â· ` : ''}${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '% rain chance Â· ' : ''}checked ${e.evidence_score != null ? Math.round(e.evidence_score * 100) : 0}% of evidence gates</div>
+          <div class="forecast-place">${esc(activeLocationName)} · ${esc(activeLocationKind)}</div>
+          <div class="instant-sub">${b ? `${esc(b.temperature_low_f)}–${esc(b.temperature_high_f)}°F expected · ` : ''}${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '% rain chance · ' : ''}checked ${e.evidence_score != null ? Math.round(e.evidence_score * 100) : 0}% of evidence gates</div>
           <div class="chip-row">${alertChip}<span class="chip">${SCOPE_LABELS[v.claim_scope] ?? esc(label(v.claim_scope))}</span><span class="chip">${label(v.product_verdict)}</span>${sourceChip}</div>
         </div>
       </div>
@@ -439,7 +439,7 @@ $('run').addEventListener('click', async () => {
       ${fallbackNote}
       ${scopeLadderHtml(v)}
       <details class="govdetail">
-        <summary>Full governance detail â€” verdict, evidence, uncertainty, artifact</summary>
+        <summary>Full governance detail — verdict, evidence, uncertainty, artifact</summary>
         <h2>Forecast Verdict</h2>
         <div class="verdict">${label(v.product_verdict)}</div>
         <div class="grid">
@@ -451,7 +451,7 @@ $('run').addEventListener('click', async () => {
           <div class="pill"><small>Uncertainty</small><br><strong>${label(e.uncertainty)}</strong></div>
           <div class="pill"><small>Official alert</small><br><strong>${alertCount}</strong></div>
           <div class="pill"><small>Knowledge state</small><br><strong>${e.knowledge_state}</strong></div>
-          <div class="pill"><small>Temperature</small><br><strong>${c.temperature_f ?? 'unknown'}${c.temperature_f != null ? 'Â°F' : ''}</strong></div>
+          <div class="pill"><small>Temperature</small><br><strong>${c.temperature_f ?? 'unknown'}${c.temperature_f != null ? '°F' : ''}</strong></div>
           <div class="pill"><small>Precipitation</small><br><strong>${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '%' : 'unknown'}</strong></div>
         </div>
         ${bandHtml(c)}
@@ -461,8 +461,8 @@ $('run').addEventListener('click', async () => {
         <h3>Why this verdict?</h3>
         <p>${v.reason_codes.length ? v.reason_codes.map(x => `<code>${x}</code>`).join(' ') : 'Evidence is sufficient for publication.'}</p>
         <h3>Artifact Status</h3>
-        <p><code>${data.artifact.artifact_hash.slice(0, 18)}...</code> â€” ${replayStatus}<br>
-        <small>location binding: <code>${data.artifact.location_binding_type}</code> Â· zero-cache: no identity, no location history</small></p>
+        <p><code>${data.artifact.artifact_hash.slice(0, 18)}...</code> — ${replayStatus}<br>
+        <small>location binding: <code>${data.artifact.location_binding_type}</code> · zero-cache: no identity, no location history</small></p>
       </details>
     `;
   } catch (error) {
