@@ -10,5 +10,6 @@ zip -r "$OUT" boundarycast-personal-weather \
   -x "*__pycache__*" \
   -x "*.pyc" \
   -x "*/.venv/*" \
+  -x "*.pytest_cache*" \
   -x "boundarycast-personal-weather/artifacts/*.ndjson"
 echo "wrote $OUT"
