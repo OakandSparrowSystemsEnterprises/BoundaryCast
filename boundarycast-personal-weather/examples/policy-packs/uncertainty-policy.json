@@ -1,14 +1,22 @@
 {
   "policy_pack_id": "uncertainty-policy-v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "domain": "weather",
   "rules": [
     {
       "rule_id": "UNCERTAINTY_TOO_WIDE",
       "deontic": "MUST",
-      "condition": "uncertainty_bounded == true",
+      "condition": "uncertainty_bounded == true OR claim_scope not in [exact_location, microclimate_adjusted]",
       "effect_if_failed": "ABSTAIN",
       "reason_code": "uncertainty_too_wide",
+      "artifact_required": true
+    },
+    {
+      "rule_id": "UNCERTAINTY_DEGRADED_SCOPE_CAUTION",
+      "deontic": "SHOULD",
+      "condition": "uncertainty_bounded == true OR claim_scope not in [nearby_observation_area, official_forecast_area]",
+      "effect_if_failed": "PERMIT_WITH_CAUTION",
+      "reason_code": "uncertainty_partially_bounded",
       "artifact_required": true
     }
   ]

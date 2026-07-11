@@ -5,6 +5,7 @@
   "jurisdiction": "US public weather data",
   "active_policy_packs": [
     "official-alert-policy-v1",
+    "claim-scope-policy-v1",
     "evidence-freshness-policy-v1",
     "microclimate-confidence-policy-v1",
     "uncertainty-policy-v1",

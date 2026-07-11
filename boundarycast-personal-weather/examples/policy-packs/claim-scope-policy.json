@@ -1,0 +1,59 @@
+{
+  "policy_pack_id": "claim-scope-policy-v1",
+  "version": "1.0.0",
+  "domain": "weather",
+  "description": "Claim Scope is the forecast-specific graceful-degradation layer. The Gatekeeper verdict answers whether the system may speak; claim scope answers how specific the system may be. Unsupported personal claims fall back to the highest supported scope instead of total abstention.",
+  "rules": [
+    {
+      "rule_id": "OFFICIAL_ALERT_SCOPE",
+      "deontic": "MUST",
+      "condition": "active_official_alert_count > 0",
+      "effect": "PROTOCOL",
+      "claim_scope": "official_alert_only",
+      "reason_code": "official_alert_scope_governs",
+      "artifact_required": true
+    },
+    {
+      "rule_id": "EXACT_LOCATION_SCOPE_ALLOWED",
+      "deontic": "MAY",
+      "condition": "location_precise_enough == true AND official_forecast_available == true AND observation_available == true AND evidence_fresh == true AND microclimate_confidence in [medium, high] AND uncertainty_bounded == true",
+      "claim_scope": "exact_location",
+      "reason_code": "exact_location_scope_supported",
+      "artifact_required": true
+    },
+    {
+      "rule_id": "MICROCLIMATE_SCOPE_ALLOWED",
+      "deontic": "MAY",
+      "condition": "official_forecast_available == true AND microclimate_confidence in [medium, high] AND uncertainty_bounded == true",
+      "claim_scope": "microclimate_adjusted",
+      "reason_code": "microclimate_scope_supported",
+      "artifact_required": true
+    },
+    {
+      "rule_id": "NEARBY_OBSERVATION_SCOPE_ALLOWED",
+      "deontic": "MAY",
+      "condition": "observation_available == true AND official_forecast_available == true",
+      "claim_scope": "nearby_observation_area",
+      "reason_code": "nearby_observation_scope_supported",
+      "artifact_required": true
+    },
+    {
+      "rule_id": "OFFICIAL_FORECAST_AREA_SCOPE_ALLOWED",
+      "deontic": "MAY",
+      "condition": "official_forecast_available == true",
+      "claim_scope": "official_forecast_area",
+      "reason_code": "official_area_scope_supported",
+      "artifact_required": true
+    },
+    {
+      "rule_id": "UNSUPPORTED_SPECIFIC_CLAIM",
+      "deontic": "MUST_NOT",
+      "condition": "requested_scope in [exact_location, microclimate_adjusted] AND requested_scope_supported == false",
+      "behavior": "Do not publish the requested specific claim. Fall back to highest_supported_scope if available.",
+      "effect_if_no_supported_scope": "ABSTAIN",
+      "claim_scope_if_no_supported_scope": "unsupported_specific_claim",
+      "reason_code": "unsupported_specific_claim",
+      "artifact_required": true
+    }
+  ]
+}

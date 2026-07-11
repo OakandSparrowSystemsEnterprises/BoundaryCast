@@ -11,6 +11,7 @@ from boundarycast_api.adapters.nws_adapter import get_official_forecast_stub
 from boundarycast_api.adapters.observation_adapter import get_observation_stub
 from boundarycast_api.adapters.alert_adapter import get_alerts_stub
 from boundarycast_api.epistemology.checks import evaluate_knowledge_state
+from boundarycast_api.epistemology.claim_scope import determine_claim_scope
 from boundarycast_api.policy.policy_loader import load_policy_packs
 from boundarycast_api.policy.rule_engine import evaluate_policy_rules
 from boundarycast_api.foresight_proxy.microclimate_adjuster import build_forecast_claim
@@ -22,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 APP_DIR = ROOT / "apps" / "web"
 ARTIFACT_PATH = ROOT / "artifacts" / "forecast-artifacts.ndjson"
 
-app = FastAPI(title="BoundaryCast Personal Weather", version="0.1.0")
+app = FastAPI(title="BoundaryCast Personal Weather", version="0.3.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/ui", StaticFiles(directory=str(APP_DIR), html=True), name="ui")
 
@@ -32,7 +33,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "engine": "BoundaryCast Personal Weather v0.1"}
+    return {"status": "healthy", "engine": "BoundaryCast Personal Weather v3.0"}
 
 @app.post("/api/v1/personal-forecast")
 def personal_forecast(req: PersonalForecastRequest):
@@ -47,17 +48,19 @@ def personal_forecast(req: PersonalForecastRequest):
         "alerts": get_alerts_stub(req),
     }
     epistemology = evaluate_knowledge_state(evidence, req)
+    scope_decision = determine_claim_scope(req.requested_scope, epistemology, evidence)
     policy_packs = load_policy_packs(ROOT / "examples" / "policy-packs")
-    policy_result = evaluate_policy_rules(policy_packs, evidence, epistemology)
-    claim = build_forecast_claim(req, evidence, epistemology)
-    verdict = evaluate_gatekeeper(evidence, epistemology, policy_result, claim)
-    artifact = create_artifact(ARTIFACT_PATH, req.tenant_id, evidence, claim, policy_packs, verdict)
+    policy_result = evaluate_policy_rules(policy_packs, evidence, epistemology, scope_decision)
+    claim = build_forecast_claim(req, evidence, epistemology, scope_decision)
+    verdict = evaluate_gatekeeper(evidence, epistemology, policy_result, claim, scope_decision)
+    artifact = create_artifact(ARTIFACT_PATH, req, evidence, claim, policy_packs, verdict)
     return {
         "product": "BoundaryCast",
         "frame": "Your Weather",
         "location_context": location_context,
         "microclimate_context": microclimate_context,
         "epistemology": epistemology,
+        "scope_decision": scope_decision,
         "claim": claim,
         "verdict": verdict,
         "artifact": artifact,

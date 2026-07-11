@@ -1,6 +1,17 @@
 from datetime import datetime, timezone
 
 def get_observation_stub(req):
+    if req.simulate_no_observation:
+        # Source is known but no nearby observation is available.
+        return {
+            "source_name": "nearest_public_observation_stub",
+            "available": False,
+            "retrieved_at": datetime.now(timezone.utc).isoformat(),
+            "freshness_minutes": None,
+            "distance_km": None,
+            "temperature_f": None,
+            "wind_mph": None,
+        }
     return {
         "source_name": "nearest_public_observation_stub",
         "available": True,

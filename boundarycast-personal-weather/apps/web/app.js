@@ -14,6 +14,17 @@ function boolOrNull(v) {
   return null;
 }
 
+function label(v) { return String(v ?? 'unknown').replaceAll('_', ' '); }
+
+const SCOPE_LABELS = {
+  exact_location: 'Exact location',
+  microclimate_adjusted: 'Microclimate adjusted',
+  nearby_observation_area: 'Nearby observation area',
+  official_forecast_area: 'Official forecast area',
+  official_alert_only: 'Official alert only',
+  unsupported_specific_claim: 'Unsupported specific claim',
+};
+
 function showError(message) {
   $('result').innerHTML = `
     <h2>Forecast Verdict</h2>
@@ -26,6 +37,7 @@ $('run').addEventListener('click', async () => {
   const lat = numberOrNull($('lat').value);
   const lon = numberOrNull($('lon').value);
   const precision = numberOrNull($('precision').value);
+  const scenario = $('scenario').value;
 
   if (lat === null || lon === null || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     showError('Latitude must be between -90 and 90 and longitude between -180 and 180.');
@@ -36,18 +48,22 @@ $('run').addEventListener('click', async () => {
     latitude: lat,
     longitude: lon,
     precision_meters: precision ?? 25,
+    requested_scope: $('requestedScope').value,
     surface_exposure: valueOrNull($('surface').value),
     shade_exposure: valueOrNull($('shade').value),
     wind_exposure: valueOrNull($('wind').value),
     elevation_meters: numberOrNull($('elevation').value),
     nearby_water: boolOrNull($('water').value),
     urban_density: valueOrNull($('urban').value),
-    demo_mode: true
+    demo_mode: true,
+    simulate_alert: scenario === 'alert',
+    simulate_no_official_forecast: scenario === 'no_forecast' || scenario === 'nothing',
+    simulate_no_observation: scenario === 'no_observation' || scenario === 'nothing'
   };
 
   const button = $('run');
   button.disabled = true;
-  $('result').innerHTML = '<h2>Forecast Verdict</h2><p>Checking evidence, policy, and artifact path...</p>';
+  $('result').innerHTML = '<h2>Forecast Verdict</h2><p>Checking evidence, policy, scope, and artifact path...</p>';
 
   try {
     const res = await fetch('/api/v1/personal-forecast', {
@@ -66,23 +82,44 @@ $('run').addEventListener('click', async () => {
     const v = data.verdict;
     const c = data.claim;
     const e = data.epistemology;
+    const loc = data.location_context;
+    const alertCount = v.claim_scope === 'official_alert_only' ? 'ACTIVE — alert governs' : 'none active';
+    const locationSpecificity = `${loc.precision_meters} m ${loc.personal_location_language_allowed ? '(personal-location language allowed)' : '(too coarse for personal-location language)'}`;
+    const fallbackNote = v.fallback_applied
+      ? `<p class="fallback">Requested scope <code>${label(v.requested_scope)}</code> was not supported by the evidence, so BoundaryCast fell back to the highest supported scope instead of refusing to answer.</p>`
+      : '';
+
+    let replayStatus = 'recorded';
+    try {
+      const replay = await (await fetch('/api/v1/replay')).json();
+      replayStatus = replay.ok ? `chain verified (${replay.count} artifacts)` : `chain FAILED: ${replay.error}`;
+    } catch { replayStatus = 'recorded (replay check unavailable)'; }
 
     $('result').innerHTML = `
       <h2>Forecast Verdict</h2>
-      <div class="verdict">${v.product_verdict.replaceAll('_', ' ')}</div>
-      <p>${c.summary}</p>
+      <div class="verdict">${label(v.product_verdict)}</div>
+      <div class="scope-badge scope-${v.claim_scope}">Forecast Scope: ${SCOPE_LABELS[v.claim_scope] ?? label(v.claim_scope)}</div>
+      <p>${c.public_message}</p>
+      ${fallbackNote}
       <div class="grid">
+        <div class="pill"><small>Forecast scope</small><br><strong>${label(v.claim_scope)}</strong></div>
+        <div class="pill"><small>Requested scope</small><br><strong>${label(v.requested_scope)}</strong></div>
+        <div class="pill"><small>Location specificity</small><br><strong>${locationSpecificity}</strong></div>
         <div class="pill"><small>Microclimate confidence</small><br><strong>${v.microclimate_confidence}</strong></div>
-        <div class="pill"><small>Knowledge state</small><br><strong>${e.knowledge_state}</strong></div>
         <div class="pill"><small>Evidence score</small><br><strong>${e.evidence_score}</strong></div>
-        <div class="pill"><small>Uncertainty</small><br><strong>${e.uncertainty.replaceAll('_', ' ')}</strong></div>
-        <div class="pill"><small>Temperature</small><br><strong>${c.temperature_f ?? 'unknown'}°F</strong></div>
-        <div class="pill"><small>Precipitation</small><br><strong>${Math.round((c.precip_probability ?? 0) * 100)}%</strong></div>
+        <div class="pill"><small>Uncertainty</small><br><strong>${label(e.uncertainty)}</strong></div>
+        <div class="pill"><small>Official alert</small><br><strong>${alertCount}</strong></div>
+        <div class="pill"><small>Knowledge state</small><br><strong>${e.knowledge_state}</strong></div>
+        <div class="pill"><small>Temperature</small><br><strong>${c.temperature_f ?? 'unknown'}${c.temperature_f != null ? '°F' : ''}</strong></div>
+        <div class="pill"><small>Precipitation</small><br><strong>${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '%' : 'unknown'}</strong></div>
       </div>
-      <h3>Why</h3>
+      <h3>Why this scope?</h3>
+      <p>${v.scope_reason_codes.map(x => `<code>${x}</code>`).join(' ')}</p>
+      <h3>Why this verdict?</h3>
       <p>${v.reason_codes.length ? v.reason_codes.map(x => `<code>${x}</code>`).join(' ') : 'Evidence is sufficient for publication.'}</p>
-      <h3>Artifact</h3>
-      <p>Created: <code>${data.artifact.artifact_hash.slice(0, 18)}...</code></p>
+      <h3>Artifact Status</h3>
+      <p><code>${data.artifact.artifact_hash.slice(0, 18)}...</code> — ${replayStatus}<br>
+      <small>location binding: <code>${data.artifact.location_binding_type}</code> · zero-cache: no identity, no location history</small></p>
     `;
   } catch (error) {
     showError(`Could not reach the BoundaryCast API. ${String(error)}`);
