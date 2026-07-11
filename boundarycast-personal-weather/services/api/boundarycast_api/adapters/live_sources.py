@@ -13,6 +13,7 @@ import os
 import threading
 import time
 import urllib.request
+import urllib.parse
 from datetime import datetime, timezone
 
 LIVE_ENV = "BOUNDARYCAST_LIVE_EVIDENCE"
@@ -38,7 +39,26 @@ WMO_SUMMARIES = {
 
 
 def live_enabled():
-    return os.environ.get(LIVE_ENV) == "1"
+    # Personal weather is live by default. Operators can explicitly disable
+    # outbound evidence calls with BOUNDARYCAST_LIVE_EVIDENCE=0.
+    return os.environ.get(LIVE_ENV, "1") != "0"
+
+
+def search_locations(query, limit=5):
+    params = urllib.parse.urlencode({
+        "name": query, "count": limit, "language": "en", "format": "json",
+    })
+    data = _fetch_json(f"https://geocoding-api.open-meteo.com/v1/search?{params}")
+    results = []
+    for item in data.get("results") or []:
+        parts = [item.get("name"), item.get("admin1"), item.get("country")]
+        results.append({
+            "name": ", ".join(dict.fromkeys(p for p in parts if p)),
+            "latitude": item.get("latitude"),
+            "longitude": item.get("longitude"),
+            "timezone": item.get("timezone"),
+        })
+    return results
 
 
 def _fetch_json(url, headers=None):
@@ -129,3 +149,4 @@ def live_alerts(lat, lon):
         "active_alert_count": len(features),
         "alerts": alerts,
     }
+

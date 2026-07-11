@@ -1,5 +1,5 @@
 import math
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -19,6 +19,7 @@ from boundarycast_api.adapters.microclimate_adapter import build_microclimate_co
 from boundarycast_api.adapters.nws_adapter import get_official_forecast_stub
 from boundarycast_api.adapters.observation_adapter import get_observation_stub
 from boundarycast_api.adapters.alert_adapter import get_alerts_stub
+from boundarycast_api.adapters.live_sources import search_locations
 from boundarycast_api.epistemology.checks import evaluate_knowledge_state
 from boundarycast_api.epistemology.claim_scope import determine_claim_scope
 from boundarycast_api.policy.policy_loader import load_policy_packs
@@ -128,6 +129,15 @@ def evaluate_governed_forecast(req: PersonalForecastRequest):
 def personal_forecast(req: PersonalForecastRequest):
     return evaluate_governed_forecast(req)
 
+@app.get("/api/v1/locations/search")
+def location_search(q: str = Query(min_length=2, max_length=100)):
+    """Resolve a city, address, or destination to coordinates without
+    retaining the query or building location history."""
+    try:
+        return {"results": search_locations(q)}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Location search is temporarily unavailable") from exc
+
 @app.get("/api/v1/oracle/recipe")
 def oracle_recipe():
     """Machine-readable oracle recipe manifest for market factories."""
@@ -204,3 +214,4 @@ def seed_demo_markets():
         presets.append((question_out, params, 60, 40))
     seeded = market_book.seed_demo(presets)
     return {"markets": market_book.list_markets(), "seeded": seeded}
+

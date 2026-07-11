@@ -33,6 +33,12 @@ const SCOPE_LABELS = {
 };
 
 const SCOPE_LADDER = ['exact_location', 'microclimate_adjusted', 'nearby_observation_area', 'official_forecast_area'];
+let activeLocationName = 'San Francisco, California';
+let activeLocationKind = 'demo starting point';
+
+function showActiveLocation() {
+  $('locationNow').innerHTML = `Showing: <strong>${esc(activeLocationName)}</strong> <span>${esc(activeLocationKind)}</span>`;
+}
 
 function scopeLadderHtml(v) {
   const special = v.claim_scope === 'official_alert_only' || v.claim_scope === 'unsupported_specific_claim';
@@ -91,8 +97,8 @@ function coordinatesValid() {
 
 function currentEvidenceBody() {
   return {
-    latitude: numberOrNull($('lat').value) ?? 37.7974,
-    longitude: numberOrNull($('lon').value) ?? -121.2161,
+    latitude: numberOrNull($('lat').value) ?? 37.7749,
+    longitude: numberOrNull($('lon').value) ?? -122.4194,
     precision_meters: numberOrNull($('precision').value) ?? 25,
     surface_exposure: valueOrNull($('surface').value),
     shade_exposure: valueOrNull($('shade').value),
@@ -172,11 +178,48 @@ $('geo').addEventListener('click', () => {
     $('lat').value = pos.coords.latitude.toFixed(4);
     $('lon').value = pos.coords.longitude.toFixed(4);
     $('precision').value = Math.max(1, Math.min(100000, Math.round(pos.coords.accuracy || 25)));
+    activeLocationName = `Current location (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`;
+    activeLocationKind = 'live device location';
+    showActiveLocation();
     $('tourStatus').textContent = 'Using your live location — used for this request only, never stored.';
     $('run').click();
   }, () => {
     $('tourStatus').textContent = 'Location permission denied — using demo coordinates.';
   });
+});
+
+// --- Destination lookup: separate from device location, zero history ---
+
+$('destinationForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const query = $('destination').value.trim();
+  if (query.length < 2) return;
+  const target = $('destinationResults');
+  target.innerHTML = '<p>Finding locations...</p>';
+  try {
+    const res = await fetch(`/api/v1/locations/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error(`search failed (HTTP ${res.status})`);
+    const data = await res.json();
+    target.innerHTML = data.results.length ? data.results.map((place, index) => `
+      <button type="button" class="destination-result" data-place="${index}">
+        <strong>${esc(place.name)}</strong><small>${Number(place.latitude).toFixed(3)}, ${Number(place.longitude).toFixed(3)}</small>
+      </button>`).join('') : '<p>No matching destinations found.</p>';
+    target.querySelectorAll('[data-place]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const place = data.results[Number(button.dataset.place)];
+        $('lat').value = Number(place.latitude).toFixed(4);
+        $('lon').value = Number(place.longitude).toFixed(4);
+        $('precision').value = 1000;
+        activeLocationName = place.name;
+        activeLocationKind = 'destination forecast';
+        showActiveLocation();
+        target.innerHTML = `<p class="destination-selected">Checking ${esc(place.name)} now.</p>`;
+        $('run').click();
+      });
+    });
+  } catch (error) {
+    target.innerHTML = `<p>Could not search locations. ${esc(String(error))}</p>`;
+  }
 });
 
 // --- Judge tour: auto-runs the 4-beat demo ---
@@ -378,13 +421,15 @@ $('run').addEventListener('click', async () => {
       ? '<span class="chip chip-alert">⚠ Official alert governs</span>'
       : '<span class="chip chip-ok">No official alerts</span>';
     const live = Object.values(data.evidence_sources ?? {}).some(s => String(s).includes('live'));
-    const sourceChip = `<span class="chip">${live ? '🌐 live public data' : 'demo data'}</span>`;
+    const unavailable = Object.values(data.evidence_sources ?? {}).some(s => String(s).includes('unavailable'));
+    const sourceChip = `<span class="chip">${live ? '🌐 live public data' : unavailable ? 'live data unavailable' : 'demo data'}</span>`;
 
     $('result').innerHTML = `
       <div class="instant">
         <div class="instant-temp">${c.temperature_f ?? '—'}<span class="deg">°F</span></div>
         <div class="instant-main">
           <div class="instant-line">${esc(c.summary)}</div>
+          <div class="forecast-place">${esc(activeLocationName)} · ${esc(activeLocationKind)}</div>
           <div class="instant-sub">${b ? `${esc(b.temperature_low_f)}–${esc(b.temperature_high_f)}°F expected · ` : ''}${c.precip_probability != null ? Math.round(c.precip_probability * 100) + '% rain chance · ' : ''}checked ${e.evidence_score != null ? Math.round(e.evidence_score * 100) : 0}% of evidence gates</div>
           <div class="chip-row">${alertChip}<span class="chip">${SCOPE_LABELS[v.claim_scope] ?? esc(label(v.claim_scope))}</span><span class="chip">${label(v.product_verdict)}</span>${sourceChip}</div>
         </div>
@@ -429,7 +474,9 @@ $('run').addEventListener('click', async () => {
 
 // --- Auto-populate on load: the answer, not a form ---
 (async function init() {
+  showActiveLocation();
   try { await fetch('/api/v1/markets/seed-demo', { method: 'POST' }); } catch { /* board shows its own error */ }
   loadMarkets();
   $('run').click();
 })();
+

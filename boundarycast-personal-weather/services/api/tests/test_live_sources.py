@@ -1,5 +1,5 @@
-"""Live evidence adapters: off by default, parse real payload shapes,
-and fall back to demo stubs on any failure. Plus the crowd feedback loop."""
+"""Live evidence adapters: live by default, parse real payload shapes,
+and never present demo stubs as current weather. Plus crowd feedback."""
 import pytest
 from fastapi.testclient import TestClient
 
@@ -23,10 +23,11 @@ def client(tmp_path, monkeypatch):
     return TestClient(main.app)
 
 
-def test_live_disabled_by_default_uses_stubs(client, monkeypatch):
+def test_live_enabled_by_default(client, monkeypatch):
     monkeypatch.delenv(live_sources.LIVE_ENV, raising=False)
+    monkeypatch.setattr(live_sources, "_fetch_json", lambda url, headers=None: OPEN_METEO_PAYLOAD if "weather.gov" not in url else {"features": []})
     d = client.post("/api/v1/personal-forecast", json={"demo_mode": False}).json()
-    assert d["evidence_sources"]["official_forecast"] == "official_forecast_stub"
+    assert d["evidence_sources"]["official_forecast"] == "open-meteo-forecast-live"
 
 
 def test_live_parses_real_payload_shapes(client, monkeypatch):
@@ -43,14 +44,14 @@ def test_live_parses_real_payload_shapes(client, monkeypatch):
     assert d["verdict"]["claim_scope"] == "official_alert_only"
 
 
-def test_live_failure_falls_back_to_stub(client, monkeypatch):
+def test_live_failure_never_claims_stub_temperature_is_current(client, monkeypatch):
     monkeypatch.setenv(live_sources.LIVE_ENV, "1")
     def broken(url, headers=None):
         raise OSError("network down")
     monkeypatch.setattr(live_sources, "_fetch_json", broken)
     d = client.post("/api/v1/personal-forecast", json={"demo_mode": False}).json()
-    assert d["evidence_sources"]["official_forecast"] == "official_forecast_stub"
-    assert d["claim"]["temperature_f"] == 88
+    assert d["evidence_sources"]["official_forecast"] == "live_forecast_unavailable"
+    assert d["claim"]["temperature_f"] is None
 
 
 def test_simulation_flags_override_live(client, monkeypatch):
@@ -71,3 +72,4 @@ def test_crowd_feedback_scoreboard(client):
     assert cf["crowd_correct"] == 0
     assert cf["crowd_brier_score"] == pytest.approx(0.36, abs=0.001)
     assert "calibration" in cf["training_note"]
+

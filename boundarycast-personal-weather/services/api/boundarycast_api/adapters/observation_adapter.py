@@ -18,7 +18,13 @@ def get_observation_stub(req):
         try:
             return live_observation(req.latitude, req.longitude)
         except Exception:
-            pass  # live source down or unparseable: deterministic demo fallback
+            return {
+                "source_name": "live_observation_unavailable",
+                "available": False,
+                "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                "freshness_minutes": None, "distance_km": None,
+                "temperature_f": None, "wind_mph": None,
+            }
     return {
         "source_name": "nearest_public_observation_stub",
         "available": True,
@@ -28,3 +34,4 @@ def get_observation_stub(req):
         "temperature_f": 87,
         "wind_mph": 6,
     }
+
