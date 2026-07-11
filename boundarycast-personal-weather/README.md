@@ -60,4 +60,4 @@ The weather adapters are deterministic demo stubs; production wires real NWS/obs
 
 This repository is public-safe: no QTP, Manifold equations, SIP derivations, production Gatekeeper invariants, claim-altitude math, corridor operators, private OASSE thresholds, policy-pack compiler internals, QuickOps policy packs, or consortium math (`docs/non-public-exclusions.md`).
 
-Proprietary source-available — © 2026 Oak & Sparrow Systems Enterprise LLC; evaluation, demonstration, and judging permitted. See `LICENSE`. An open-source release is planned.
+Free and open source under the MIT License — © 2026 Oak & Sparrow Systems Enterprise LLC. See `LICENSE`. The private production math stays out of this repository by design (safe harbor via the provider seam), not by license.

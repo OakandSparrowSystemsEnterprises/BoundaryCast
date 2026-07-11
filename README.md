@@ -29,4 +29,4 @@ The full project — engine, market factory, OWL ontology, deontic policy packs,
 
 ## License
 
-Proprietary source-available — © 2026 Oak & Sparrow Systems Enterprise LLC. Evaluation, demonstration, and hackathon judging permitted; see [LICENSE](boundarycast-personal-weather/LICENSE).
+Free and open source under the [MIT License](boundarycast-personal-weather/LICENSE) — © 2026 Oak & Sparrow Systems Enterprise LLC. The private production math stays out of this repository by design (safe harbor), not by license.
