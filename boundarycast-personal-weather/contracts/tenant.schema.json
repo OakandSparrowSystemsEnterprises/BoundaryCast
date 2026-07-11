@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BoundaryCast Tenant",
+  "type": "object",
+  "required": ["tenant_id", "tenant_type", "active_policy_packs"],
+  "properties": {
+    "tenant_id": {"type": "string"},
+    "tenant_type": {"type": "string"},
+    "product_frame": {"type": "string"},
+    "active_policy_packs": {"type": "array", "items": {"type": "string"}}
+  }
+}

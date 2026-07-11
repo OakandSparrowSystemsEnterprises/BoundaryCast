@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BoundaryCast Location Context",
+  "type": "object",
+  "required": ["lat", "lon", "precision_meters"],
+  "properties": {
+    "lat": {"type": "number"},
+    "lon": {"type": "number"},
+    "precision_meters": {"type": "number"},
+    "personal_location_language_allowed": {"type": "boolean"}
+  }
+}

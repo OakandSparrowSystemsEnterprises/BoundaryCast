@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BoundaryCast Evidence Bundle",
+  "type": "object",
+  "required": ["tenant_id", "location_context", "microclimate_context", "official_forecast", "observation", "alerts"],
+  "properties": {
+    "tenant_id": {"type": "string"},
+    "location_context": {"type": "object"},
+    "microclimate_context": {"type": "object"},
+    "official_forecast": {"type": "object"},
+    "observation": {"type": "object"},
+    "alerts": {"type": "object"}
+  }
+}

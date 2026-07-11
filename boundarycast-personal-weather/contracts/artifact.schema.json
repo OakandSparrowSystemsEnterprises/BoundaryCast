@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BoundaryCast Decision Artifact",
+  "type": "object",
+  "required": ["artifact_id", "tenant_id", "evidence_root", "claim_root", "gatekeeper_verdict", "artifact_hash"],
+  "properties": {
+    "artifact_id": {"type": "string"},
+    "previous_hash": {"type": ["string", "null"]},
+    "tenant_id": {"type": "string"},
+    "evidence_root": {"type": "string"},
+    "claim_root": {"type": "string"},
+    "policy_pack_versions": {"type": "array"},
+    "gatekeeper_verdict": {"type": "string"},
+    "artifact_hash": {"type": "string"}
+  }
+}

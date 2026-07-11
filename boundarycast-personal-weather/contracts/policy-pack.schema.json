@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BoundaryCast Policy Pack",
+  "type": "object",
+  "required": ["policy_pack_id", "version", "domain", "rules"],
+  "properties": {
+    "policy_pack_id": {"type": "string"},
+    "version": {"type": "string"},
+    "domain": {"type": "string"},
+    "rules": {"type": "array"}
+  }
+}

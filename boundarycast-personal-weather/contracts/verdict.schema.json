@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BoundaryCast Gatekeeper-Lite Verdict",
+  "type": "object",
+  "required": ["gatekeeper_verdict", "product_verdict", "reason_codes", "artifact_required"],
+  "properties": {
+    "gatekeeper_verdict": {"enum": ["PERMIT", "PERMIT_WITH_CAUTION", "ABSTAIN", "PROTOCOL", "BLOCK"]},
+    "product_verdict": {"enum": ["publish", "publish_with_caution", "abstain", "official_alert_governs", "blocked"]},
+    "reason_codes": {"type": "array"},
+    "artifact_required": {"type": "boolean"}
+  }
+}

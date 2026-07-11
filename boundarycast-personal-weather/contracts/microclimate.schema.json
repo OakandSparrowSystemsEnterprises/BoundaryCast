@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BoundaryCast Microclimate Context",
+  "type": "object",
+  "required": ["microclimate_context_id", "microclimate_confidence"],
+  "properties": {
+    "microclimate_context_id": {"type": "string"},
+    "surface_exposure": {"type": "string"},
+    "shade_exposure": {"type": "string"},
+    "elevation_meters": {"type": ["number", "null"]},
+    "wind_exposure": {"type": "string"},
+    "nearby_water": {},
+    "urban_density": {"type": "string"},
+    "microclimate_confidence": {"enum": ["low", "low-medium", "medium", "high", "unsupported"]}
+  }
+}

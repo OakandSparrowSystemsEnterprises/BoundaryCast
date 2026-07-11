@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BoundaryCast Replay Result",
+  "type": "object",
+  "required": ["ok", "count"],
+  "properties": {
+    "ok": {"type": "boolean"},
+    "count": {"type": "integer"},
+    "message": {"type": "string"},
+    "error": {"type": "string"}
+  }
+}
