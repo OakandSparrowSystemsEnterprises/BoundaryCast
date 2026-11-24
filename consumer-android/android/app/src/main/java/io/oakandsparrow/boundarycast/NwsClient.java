@@ -23,13 +23,14 @@ final class NwsClient {
         return p!=null && (p.startsWith("/points/") || p.startsWith("/gridpoints/") ||
             p.startsWith("/stations/") || p.equals("/alerts") || p.startsWith("/alerts/active"));
     }
-    static JSONObject get(String url) throws Exception {
+    static JSONObject get(String url,long deadline) throws Exception {
         URI uri=new URI(url);
         for (int redirect=0;redirect<=2;redirect++) {
-            if(Thread.currentThread().isInterrupted() || !allowed(uri))throw new IllegalArgumentException("invalid endpoint");
+            if(Thread.currentThread().isInterrupted() || System.nanoTime()>=deadline || !allowed(uri))throw new IllegalArgumentException("invalid endpoint");
             HttpURLConnection conn=(HttpURLConnection)uri.toURL().openConnection();
             conn.setInstanceFollowRedirects(false);conn.setUseCaches(false);
-            conn.setConnectTimeout(TIMEOUT);conn.setReadTimeout(TIMEOUT);
+            int remaining=(int)Math.max(1,Math.min(TIMEOUT,(deadline-System.nanoTime())/1_000_000L));
+            conn.setConnectTimeout(remaining);conn.setReadTimeout(remaining);
             conn.setRequestProperty("User-Agent",USER_AGENT);
             conn.setRequestProperty("Accept","application/geo+json");
             conn.setRequestProperty("Cache-Control","no-cache, no-store");
@@ -43,12 +44,22 @@ final class NwsClient {
                 if(status!=200)throw new IllegalStateException("provider response unavailable");
                 try(InputStream in=conn.getInputStream(); ByteArrayOutputStream out=new ByteArrayOutputStream()) {
                     byte[] buffer=new byte[8192];int n,total=0;
-                    while((n=in.read(buffer))!=-1){total+=n;if(total>MAX_BYTES||Thread.currentThread().isInterrupted())throw new IllegalStateException("response limit");out.write(buffer,0,n);}
+                    while((n=in.read(buffer))!=-1){total+=n;if(total>MAX_BYTES||Thread.currentThread().isInterrupted()||System.nanoTime()>=deadline)throw new IllegalStateException("response limit");out.write(buffer,0,n);}
                     return new JSONObject(out.toString(StandardCharsets.UTF_8.name()));
                 }
             } finally {conn.disconnect();}
         }
         throw new IllegalStateException("redirect limit");
+    }
+    private static boolean hasUrgentAlert(JSONObject response){
+        JSONArray features=response.optJSONArray("features");if(features==null)return false;
+        for(int i=0;i<features.length();i++){
+            JSONObject f=features.optJSONObject(i);JSONObject p=props(f);if(p==null)continue;
+            String severity=p.optString("severity","");
+            if(!"Actual".equals(p.optString("status"))||"Cancel".equals(p.optString("messageType"))||p.optString("event").trim().isEmpty()||(!"Severe".equals(severity)&&!"Extreme".equals(severity)))continue;
+            try{if(java.time.OffsetDateTime.parse(p.getString("expires")).toInstant().isAfter(java.time.Instant.now()))return true;}catch(Exception ignored){}
+        }
+        return false;
     }
     private static JSONObject props(JSONObject x){return x==null?null:x.optJSONObject("properties");}
     static double distanceKm(double a,double b,double c,double d){
@@ -61,29 +72,31 @@ final class NwsClient {
         Station(String id,String name,double distance){this.id=id;this.name=name;this.distance=distance;}
     }
     static JSONObject read(double lat,double lon, String inputKind,double accuracy) throws Exception{
+        long deadline=System.nanoTime()+40_000_000_000L;
         JSONObject out=new JSONObject();
         JSONObject status=new JSONObject();out.put("status",status);
         out.put("inputKind",inputKind);if(Double.isFinite(accuracy))out.put("accuracyM",accuracy);
         String location=String.format(Locale.US,"%.4f,%.4f",lat,lon);
         // The alert request is independent: a point/forecast failure must not erase a known official warning.
-        try{JSONObject alerts=get(ROOT+"/alerts/active?point="+location);out.put("alerts",alerts);status.put("alerts","ok");}
+        try{JSONObject alerts=get(ROOT+"/alerts/active?point="+location,deadline);out.put("alerts",alerts);status.put("alerts","ok");
+            if(hasUrgentAlert(alerts))return out; // Do not delay a known urgent warning for routine forecast or station lookups.}
         catch(Exception ignored){status.put("alerts","unavailable");}
         if(Thread.currentThread().isInterrupted())throw new InterruptedException();
         JSONObject point=null;
-        try{point=props(get(ROOT+"/points/"+location));if(point==null)throw new IllegalStateException("point");status.put("point","ok");
+        try{point=props(get(ROOT+"/points/"+location,deadline));if(point==null)throw new IllegalStateException("point");status.put("point","ok");
             JSONObject relative=point.optJSONObject("relativeLocation");JSONObject place=props(relative);
             if(place!=null){out.put("city",place.optString("city",""));out.put("state",place.optString("state",""));}
             out.put("timeZone",point.optString("timeZone",""));
         }catch(Exception ignored){status.put("point","unavailable");}
         if(point!=null&&!Thread.currentThread().isInterrupted()){
-            try{String url=point.getString("forecastHourly");out.put("forecast",get(url));status.put("forecast","ok");}
+            try{String url=point.getString("forecastHourly");out.put("forecast",get(url,deadline));status.put("forecast","ok");}
             catch(Exception ignored){status.put("forecast","unavailable");}
         }
         if(Thread.currentThread().isInterrupted())throw new InterruptedException();
         JSONArray observations=new JSONArray();out.put("observations",observations);
         if(point!=null){
             try {
-                JSONObject list=get(point.getString("observationStations"));
+                JSONObject list=get(point.getString("observationStations"),deadline);
                 JSONArray features=list.getJSONArray("features");
                 ArrayList<Station> stations=new ArrayList<>();
                 for(int i=0;i<Math.min(features.length(),100);i++){
@@ -102,7 +115,7 @@ final class NwsClient {
                     if(Thread.currentThread().isInterrupted())throw new InterruptedException();
                     Station s=stations.get(i);
                     try{
-                        JSONObject observation=get(ROOT+"/stations/"+s.id+"/observations/latest");
+                        JSONObject observation=get(ROOT+"/stations/"+s.id+"/observations/latest",deadline);
                         JSONObject o=props(observation);
                         if(o!=null)observations.put(new JSONObject().put("stationId",s.id).put("stationName",s.name).put("distanceKm",s.distance).put("properties",o));
                     }catch(Exception ignored){}

@@ -35,7 +35,7 @@ import java.util.concurrent.Future;
 public final class MainActivity extends Activity {
     private static final String HOST="appassets.androidplatform.net";
     private static final String ENTRY="https://"+HOST+"/assets/index.html";
-    private static final Set<String> ASSETS=Set.of("/assets/index.html","/assets/styles.css","/assets/engine.js","/assets/app.js","/assets/LICENSE.txt");
+    private static final Set<String> ASSETS=java.util.Collections.unmodifiableSet(new java.util.HashSet<>(java.util.Arrays.asList("/assets/index.html","/assets/styles.css","/assets/engine.js","/assets/app.js","/assets/LICENSE.txt")));
     private static final int LOCATION_REQUEST=41;
     private final Handler main=new Handler(Looper.getMainLooper());
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -45,7 +45,7 @@ public final class MainActivity extends Activity {
     private Runnable locationTimeout;
     private Future<?> running;
     private int generation;
-    private boolean busy,permissionPending,visible;
+    private boolean busy,permissionPending,visible,locating,permissionResultDeferred;
     private String activeId="";
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
@@ -100,10 +100,17 @@ public final class MainActivity extends Activity {
     @Override public void onRequestPermissionsResult(int req,String[] p,int[] result){
         super.onRequestPermissionsResult(req,p,result);
         if(req!=LOCATION_REQUEST)return;permissionPending=false;
-        if(!busy||!visible){cancelAll();return;}
+        if(!busy){return;}
+        if(!visible){permissionResultDeferred=true;return;}
+        handlePermissionResult();
+    }
+    private void handlePermissionResult(){
+        permissionResultDeferred=false;
+        if(!busy)return;
         if(permission())locate(generation);else fail(generation,"Location permission declined. You can enter coordinates instead.");
     }
     private void locate(int token){
+        locating=true;
         locations=(LocationManager)getSystemService(LOCATION_SERVICE);
         if(locations==null){fail(token,"Location service unavailable. Enter coordinates instead.");return;}
         // An explicitly requested, foreground one-shot fix. Never store coordinates or register a background listener.
@@ -133,10 +140,11 @@ public final class MainActivity extends Activity {
           Double.isFinite(l.getLatitude())&&Double.isFinite(l.getLongitude())&&Math.abs(l.getLatitude())<=90&&Math.abs(l.getLongitude())<=180;
     }
     private void acceptLocation(int token,Location l){
-        if(token!=generation||!busy||!visible||!fresh(l))return;
+        if(token!=generation||!busy||!locating||!visible||!fresh(l))return;
         stopLocation();launch(token,l.getLatitude(),l.getLongitude(),"device",l.getAccuracy());
     }
     private void stopLocation(){
+        locating=false;
         if(locationTimeout!=null){main.removeCallbacks(locationTimeout);locationTimeout=null;}
         if(locations!=null&&listener!=null)try{locations.removeUpdates(listener);}catch(RuntimeException ignored){}
         listener=null;locations=null;
@@ -154,9 +162,9 @@ public final class MainActivity extends Activity {
     }
     private void fail(int token,String message){try{deliver(token,new JSONObject().put("error",message));}catch(Exception ignored){}}
     private void cancelAll(){
-        generation++;busy=false;activeId="";stopLocation();if(running!=null){running.cancel(true);running=null;}
+        generation++;busy=false;permissionResultDeferred=false;activeId="";stopLocation();if(running!=null){running.cancel(true);running=null;}
     }
-    @Override protected void onResume(){super.onResume();visible=true;}
-    @Override protected void onStop(){super.onStop();visible=false;if(!permissionPending){cancelAll();if(web!=null)web.evaluateJavascript("window.BoundaryCast.reset()",null);}}
+    @Override protected void onResume(){super.onResume();visible=true;if(permissionResultDeferred)handlePermissionResult();}
+    @Override protected void onStop(){super.onStop();visible=false;if(!permissionPending&&!permissionResultDeferred){cancelAll();if(web!=null)web.evaluateJavascript("window.BoundaryCast.reset()",null);}}
     @Override protected void onDestroy(){cancelAll();worker.shutdownNow();if(web!=null){web.removeJavascriptInterface("AndroidWeather");web.stopLoading();((FrameLayout)web.getParent()).removeView(web);web.destroy();web=null;}super.onDestroy();}
 }

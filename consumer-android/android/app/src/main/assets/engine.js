@@ -76,12 +76,12 @@ function decide(checks){
 }
 function evaluate(raw,now=Date.now()){
  const alerts=parseAlerts(raw,now),forecast=parseForecast(raw,now),obs=parseObservation(raw,now);
- const checks={severeAlert:alerts.active.some(a=>a.severity==="Severe"||a.severity==="Extreme"),alertChecked:alerts.checked,officialForecast:!!forecast,observation:!!obs};
+ const checks={severeAlert:alerts.active.some(a=>a.severity==="Severe"||a.severity==="Extreme"),alertChecked:alerts.checked&&raw?.status?.point==="ok",officialForecast:!!forecast&&raw?.status?.point==="ok",observation:!!obs};
  const decision=decide(checks),publish=decision.verdict==="PERMIT_WITH_CAUTION";
  // Receipt is an in-memory policy replay record. No raw point, city, device identifier, provider URL or exact location is included.
  const receipt={policy:POLICY,asOf:iso(now),requestedScope:"exact_location",checks,decision,
     evidence:{forecastIssuedAt:forecast?.issuedAt||null,observationTime:obs?.observedAt||null,station:obs?.stationId||null,activeAlerts:alerts.active.length}};
- return {decision,checks,receipt,alertStatus:alerts.checked?"checked":"unavailable",alerts:alerts.active,forecast:publish?forecast:null,observation:publish&&decision.claimScope==="nearby_observation_area"?obs:null,
+ return {decision,checks,receipt,alertStatus:checks.alertChecked?"checked":"unavailable",alerts:alerts.active,forecast:publish?forecast:null,observation:publish&&decision.claimScope==="nearby_observation_area"?obs:null,
   place:[str(raw?.city,80),str(raw?.state,20)].filter(Boolean).join(", ")||"Requested location",timeZone:str(raw?.timeZone,100),
   inputKind:raw?.inputKind==="device"?"device":"manual",accuracyM:bounded(raw?.accuracyM,0,100000)?Math.round(raw.accuracyM):null,asOf:iso(now)};
 }

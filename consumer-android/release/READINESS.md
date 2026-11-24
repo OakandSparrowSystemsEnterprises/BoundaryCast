@@ -9,5 +9,7 @@ Android permissions: foreground fine/coarse only; INTERNET; no background permis
 Acceptance: run policy fixtures; check actual NWS point/alerts/forecast/station data against official data; test GPS permission denial and approximate permission; check outside coverage, no network, malformed responses, stale observation, missing alerts, severe/Extreme controlled fixtures; check that no fake metrics or false all-clear appear; check native build, device and release manifest. Review accessibility and privacy; prepare final support/terms/privacy URLs, store graphics, Play listing, upload key and signed bundle, internal testing and publisher approval. LicensePrep's existing organization Play account can be used once Google verifies it. Proposed commercial model: one-time paid download, no ads, subscriptions or in-app purchases. Price not set; no paid service commitment. Do not publish paid before acceptance.
 
 ## Source verification
-PASS: 93 deterministic mobile policy and fixture checks. Not a native build or live provider acceptance.
+PASS: 105 deterministic mobile policy and fixture checks. Not a native build or live provider acceptance.
 App JavaScript parses. No actual Android build or live request was run in this session.
+
+Hardening follow-up: unsupported point cannot yield an all-clear; known urgent official alerts short-circuit later requests; total request deadline, same-host bounded redirect/response handling, foreground permission lifecycle and API 26 compatibility source checks. Actual NWS API JSON endpoints were not retrievable through the research environment. On-device live source test is required.

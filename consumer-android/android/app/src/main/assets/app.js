@@ -37,7 +37,7 @@ function render(model){
  else add(h,line("This is area-level weather, not a measurement at your precise location. No microclimate correction is asserted."));
  result.append(h);
  if(model.alerts.length){
-  const alerts=card(node("h2","Active official alerts"),line("National Weather Service. Read the official instructions."));
+  const alerts=card(node("h2","Active official alerts"),line("National Weather Service. Read the official instructions. "+(model.alertStatus==="unavailable"?"Complete area/alert coverage could not be verified.":"")));
   for(const a of model.alerts){const item=node("div",undefined,"alertItem");add(item,node("h3",a.event),line(a.severity+" · Expires "+fmt(a.expires,model.timeZone)),a.headline?line(a.headline,"notice"):null,a.instruction?line(a.instruction,"notice"):null);if(a.description){const details=node("details");add(details,node("summary","Full alert description"),line(a.description,"notice"));item.append(details);}alerts.append(item);}
   result.append(alerts);
  }else result.append(card(node("h2","Official alert check"),line(model.alertStatus==="checked"?"No active alerts returned for this requested point at the time of the check. This is not a guarantee of safety.":"Alert status is unavailable. Do not interpret this as an all-clear.")));
